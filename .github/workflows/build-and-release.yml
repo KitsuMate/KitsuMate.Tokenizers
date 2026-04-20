@@ -1,61 +1,118 @@
-name: Build and Release
+name: CI and Release
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - '**'
     tags:
       - 'v*'
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
-  build:
+  build_test:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
-    
+
+    - name: Setup Python
+      id: setup-python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install transformers tokenizers
+
     - name: Restore dependencies
       run: dotnet restore
-    
+
     - name: Build
       run: dotnet build --configuration Release --no-restore
-    
+
     - name: Test
+      env:
+        KITSUMATE_TOKENIZERS_PYTHON: ${{ steps.setup-python.outputs.python-path }}
       run: dotnet test --configuration Release --no-build --verbosity normal
-    
+
     - name: Pack
+      if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
       run: dotnet pack --configuration Release --no-build --output ./artifacts
-    
+
     - name: Upload artifacts
+      if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
       uses: actions/upload-artifact@v4
       with:
         name: nuget-packages
         path: ./artifacts/*.nupkg
 
-  release:
-    needs: build
+  deploy_main:
+    needs: build_test
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+      with:
+        fetch-depth: 0
+
     - name: Download artifacts
       uses: actions/download-artifact@v4
       with:
         name: nuget-packages
         path: ./artifacts
-    
+
+    - name: Update rolling release tag
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        if git ls-remote --exit-code --tags origin refs/tags/main-latest; then
+          git push origin :refs/tags/main-latest
+        fi
+        git tag -f main-latest
+        git push origin refs/tags/main-latest --force
+
+    - name: Upsert rolling GitHub release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        if gh release view main-latest >/dev/null 2>&1; then
+          gh release upload main-latest ./artifacts/*.nupkg --clobber
+          gh release edit main-latest --title "Main Latest" --notes "Rolling release for the latest successful build on main." --prerelease
+        else
+          gh release create main-latest ./artifacts/*.nupkg --title "Main Latest" --notes "Rolling release for the latest successful build on main." --prerelease
+        fi
+
+  deploy_tag:
+    needs: build_test
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: nuget-packages
+        path: ./artifacts
+
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
@@ -65,7 +122,7 @@ jobs:
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
+
     - name: Publish to NuGet (Optional)
       if: env.NUGET_API_KEY != ''
       run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

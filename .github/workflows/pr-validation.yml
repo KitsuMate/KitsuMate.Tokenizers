@@ -1,0 +1,38 @@
+name: PR Validation
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+    - name: Setup Python
+      id: setup-python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install transformers tokenizers
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+    - name: Test
+      env:
+        KITSUMATE_TOKENIZERS_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+      run: dotnet test --configuration Release --no-build --verbosity normal

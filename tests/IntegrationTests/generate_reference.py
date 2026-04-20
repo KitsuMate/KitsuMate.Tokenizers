@@ -66,10 +66,11 @@ def _load_auto_tokenizer(config, config_dir):
     print(f"Loading tokenizer via AutoTokenizer.from_pretrained: {pretrained_identifier}")
     try:
         tokenizer = AutoTokenizer.from_pretrained(pretrained_identifier, **tokenizer_kwargs)
-    except (OSError, ValueError) as exc:
+    except (ImportError, OSError, ValueError) as exc:
         if os.path.isdir(pretrained_identifier) and tokenizer_kwargs.get('vocab_file'):
             print(f"AutoTokenizer local load failed; falling back to BertTokenizer using vocab file ({exc})")
-            tokenizer = BertTokenizer(**tokenizer_kwargs)
+            vocab_file = tokenizer_kwargs.pop('vocab_file')
+            tokenizer = BertTokenizer(vocab_file, **tokenizer_kwargs)
         else:
             raise
 
