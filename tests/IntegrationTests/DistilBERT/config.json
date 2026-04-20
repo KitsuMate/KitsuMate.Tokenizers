@@ -1,0 +1,17 @@
+{
+  "name": "DistilBERT",
+  "description": "DistilBERT tokenizer - Distilled BERT with WordPiece",
+  "is_remote": true,
+  "remote_models": [
+    {
+      "model_id": "distilbert-base-uncased",
+      "test_cases": [
+        "Hello, how are you?",
+        "DistilBERT is a distilled version of BERT",
+        "Natural language understanding and processing",
+        "Tokenization with WordPiece algorithm",
+        "Testing subword segmentation capabilities"
+      ]
+    }
+  ]
+}

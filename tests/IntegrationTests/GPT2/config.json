@@ -1,0 +1,16 @@
+{
+  "name": "GPT2",
+  "description": "GPT-2 tokenizer with ByteLevel BPE",
+  "python_config": {
+    "vocab_file": "vocab.json",
+    "merges_file": "merges.txt",
+    "tokenizer_file": "tokenizer.json"
+  },
+  "test_cases": [
+    "Hello, world!",
+    "The quick brown fox jumps over the lazy dog.",
+    "This is a test of the GPT-2 tokenizer.",
+    "Python is a great programming language.",
+    "Machine learning models are fascinating!"
+  ]
+}

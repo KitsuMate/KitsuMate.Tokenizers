@@ -1,0 +1,20 @@
+{
+  "name": "BertWordPiece",
+  "description": "BERT WordPiece tokenizer with lowercase normalization",
+  "python_config": {
+    "vocab_file": "vocab.txt",
+    "do_lower_case": true,
+    "use_fast": false
+  },
+  "test_cases": [
+    "Hello World",
+    "test",
+    "testing",
+    "Hello, how are you?",
+    "Python KitsuMate",
+    "The tokenizer is working.",
+    "natural language processing",
+    "BERT base cased model",
+    "This is a test."
+  ]
+}

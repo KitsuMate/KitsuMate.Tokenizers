@@ -1,0 +1,40 @@
+{
+  "name": "EdgeCases",
+  "description": "Edge cases and special scenarios testing",
+  "is_remote": true,
+  "remote_models": [
+    {
+      "model_id": "bert-base-uncased",
+      "test_cases": [
+        "",
+        " ",
+        "a",
+        "Test with multiple     spaces",
+        "!@#$%^&*()_+-=[]{}|;:',.<>?/~`",
+        "CamelCaseTextWithoutSpaces",
+        "ALLCAPSTEXT",
+        "mix3dC4seW1thNumb3rs",
+        "Emoji test: 😀 🎉 🚀 ❤️",
+        "Unicode: ñ ü ö ä ß é è ê",
+        "Very long word: Antidisestablishmentarianism",
+        "Repeated characters: aaaaaaaaaa bbbbbbbbbb cccccccccc",
+        "URLs: https://github.com/huggingface/transformers",
+        "Email: user@example.com",
+        "Numbers: 123 456.78 9,000,000"
+      ]
+    },
+    {
+      "model_id": "gpt2",
+      "test_cases": [
+        "Line breaks\nand tabs\there",
+        "Mixed case: ThiS Is A TesT",
+        "Special tokens handling",
+        "Contractions: don't won't can't shouldn't",
+        "Possessives: John's dog's toy",
+        "Hyphenated-words and compound-terms",
+        "Abbreviations: Dr. Mr. Mrs. Ph.D.",
+        "Mathematical: 2+2=4, x²+y²=z²"
+      ]
+    }
+  ]
+}

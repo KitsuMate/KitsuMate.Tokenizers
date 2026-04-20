@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;netstandard2.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <AssemblyName>KitsuMate.Tokenizers</AssemblyName>
+    <RootNamespace>KitsuMate.Tokenizers</RootNamespace>
+    <PackageId>KitsuMate.Tokenizers</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Tomislaw</Authors>
+    <Description>A C# implementation of HuggingFace tokenizers with a native runtime and HuggingFace-style APIs</Description>
+    <PackageProjectUrl>https://github.com/KitsuMate/Tokenizers</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/KitsuMate/Tokenizers</RepositoryUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageTags>tokenizer;ml;nlp;huggingface;transformers</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="KitsuMate.Tokenizers.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Google.Protobuf" Version="3.32.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="System.Text.Json" Version="9.0.4" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Memory" Version="4.6.3" />
+  </ItemGroup>
+
+</Project>

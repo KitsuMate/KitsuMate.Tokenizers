@@ -1,0 +1,17 @@
+{
+  "name": "RoBERTa",
+  "description": "RoBERTa tokenizer - ByteLevel BPE with different vocabulary than GPT-2",
+  "is_remote": true,
+  "remote_models": [
+    {
+      "model_id": "roberta-base",
+      "test_cases": [
+        "Hello, how are you?",
+        "The quick brown fox jumps over the lazy dog.",
+        "Natural language processing with transformers",
+        "RoBERTa uses a byte-level BPE tokenizer",
+        "Testing multilingual capabilities: résumé, café, naïve"
+      ]
+    }
+  ]
+}

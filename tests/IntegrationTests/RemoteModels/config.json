@@ -1,0 +1,23 @@
+{
+  "name": "RemoteModels",
+  "description": "Integration tests for downloading and using tokenizers from HuggingFace Hub",
+  "is_remote": true,
+  "remote_models": [
+    {
+      "model_id": "bert-base-uncased",
+      "test_cases": [
+        "Hello, how are you?",
+        "The quick brown fox jumps over the lazy dog.",
+        "Python KitsuMate tokenizer integration test"
+      ]
+    },
+    {
+      "model_id": "gpt2",
+      "test_cases": [
+        "The quick brown fox jumps over the lazy dog.",
+        "Hello world!",
+        "Testing GPT-2 tokenizer"
+      ]
+    }
+  ]
+}

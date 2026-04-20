@@ -1,0 +1,20 @@
+{
+  "name": "T5",
+  "description": "T5 tokenizer - SentencePiece Unigram model",
+  "is_remote": true,
+  "remote_models": [
+    {
+      "model_id": "t5-small",
+      "test_cases": [
+        "translate English to German: Hello, how are you?",
+        "summarize: The quick brown fox jumps over the lazy dog. This is a classic pangram used in typography.",
+        "question: What is natural language processing?",
+        "T5 uses a unified text-to-text format",
+        "SentencePiece tokenization with unigram model",
+        "normalize accents: cafe",
+        "normalize accents: café",
+        "normalize accents: cafe\u0301"
+      ]
+    }
+  ]
+}

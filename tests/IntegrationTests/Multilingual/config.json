@@ -1,0 +1,32 @@
+{
+  "name": "Multilingual",
+  "description": "Multilingual models testing - BERT multilingual and XLM-RoBERTa",
+  "is_remote": true,
+  "remote_models": [
+    {
+      "model_id": "bert-base-multilingual-cased",
+      "test_cases": [
+        "Hello, how are you?",
+        "Bonjour, comment allez-vous?",
+        "Hola, ¿cómo estás?",
+        "Привет, как дела?",
+        "你好，你好吗？",
+        "مرحبا، كيف حالك؟",
+        "こんにちは、お元気ですか？",
+        "Multilingual BERT supports 104 languages"
+      ]
+    },
+    {
+      "model_id": "xlm-roberta-base",
+      "test_cases": [
+        "English: Natural language processing",
+        "French: Traitement du langage naturel",
+        "Spanish: Procesamiento del lenguaje natural",
+        "German: Verarbeitung natürlicher Sprache",
+        "Chinese: 自然语言处理",
+        "Arabic: معالجة اللغة الطبيعية",
+        "XLM-RoBERTa uses SentencePiece with 250k vocabulary"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "ALBERT",
+  "description": "ALBERT tokenizer - SentencePiece Unigram with smaller vocabulary",
+  "is_remote": true,
+  "remote_models": [
+    {
+      "model_id": "albert-base-v2",
+      "test_cases": [
+        "Hello, how are you?",
+        "ALBERT uses parameter sharing across layers",
+        "Natural language understanding with efficient parameters",
+        "SentencePiece tokenization with 30k vocabulary",
+        "Testing cross-layer parameter sharing"
+      ]
+    }
+  ]
+}
