@@ -28,7 +28,7 @@ namespace KitsuMate.Tokenizers.Tests
             }
 
             // Arrange & Act
-            var tokenizer = Tokenizer.CreateSentencePiece(TestDataPath, TokenizerBackendType.SentencePieceUnigram);
+            var tokenizer = Tokenizer.CreateSentencePieceUnigram(TestDataPath);
 
             // Assert
             Assert.NotNull(tokenizer);
@@ -52,7 +52,7 @@ namespace KitsuMate.Tokenizers.Tests
             }
 
             // Arrange
-            var tokenizer = Tokenizer.CreateSentencePiece(TestDataPath, TokenizerBackendType.SentencePieceUnigram);
+            var tokenizer = Tokenizer.CreateSentencePieceUnigram(TestDataPath);
             var originalText = "translate English to German: Hello, how are you?";
 
             // Act
@@ -76,7 +76,7 @@ namespace KitsuMate.Tokenizers.Tests
             }
 
             // Arrange
-            var tokenizer = Tokenizer.CreateSentencePiece(TestDataPath, TokenizerBackendType.SentencePieceUnigram);
+            var tokenizer = Tokenizer.CreateSentencePieceUnigram(TestDataPath);
             var text = "The quick brown fox jumps over the lazy dog";
 
             // Act - Encode the same text multiple times
@@ -99,7 +99,7 @@ namespace KitsuMate.Tokenizers.Tests
             }
 
             // Arrange
-            var tokenizer = Tokenizer.CreateSentencePiece(TestDataPath, TokenizerBackendType.SentencePieceUnigram);
+            var tokenizer = Tokenizer.CreateSentencePieceUnigram(TestDataPath);
             var testCases = new Dictionary<string, string>
             {
                 { "Short", "Hi" },
@@ -130,7 +130,7 @@ namespace KitsuMate.Tokenizers.Tests
             }
 
             // Arrange
-            var tokenizer = Tokenizer.CreateSentencePiece(TestDataPath, TokenizerBackendType.SentencePieceUnigram);
+            var tokenizer = Tokenizer.CreateSentencePieceUnigram(TestDataPath);
             var unicodeTexts = new[]
             {
                 "Héllo wörld",           // Accented characters
@@ -163,7 +163,7 @@ namespace KitsuMate.Tokenizers.Tests
             }
 
             // Arrange
-            var tokenizer = Tokenizer.CreateSentencePiece(TestDataPath, TokenizerBackendType.SentencePieceUnigram);
+            var tokenizer = Tokenizer.CreateSentencePieceUnigram(TestDataPath);
             var texts = new[]
             {
                 "Hello world",

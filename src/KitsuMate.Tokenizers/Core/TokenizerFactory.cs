@@ -39,7 +39,7 @@ namespace KitsuMate.Tokenizers.Core
             return Create(pipeline);
         }
 
-        public ITokenizer CreateFromTokenizerJson(byte[] tokenizerJson)
+        public ITokenizer CreateFromTokenizerJson(byte[] tokenizerJson, byte[]? sentencePieceModel = null, byte[]? tokenizerConfigJson = null)
         {
             if (tokenizerJson == null)
             {
@@ -47,29 +47,45 @@ namespace KitsuMate.Tokenizers.Core
             }
 
             using var tokenizerJsonStream = new MemoryStream(tokenizerJson, writable: false);
-            return CreateFromTokenizerJson(tokenizerJsonStream);
+            Stream? sentencePieceModelStream = sentencePieceModel == null ? null : new MemoryStream(sentencePieceModel, writable: false);
+            Stream? tokenizerConfigStream = tokenizerConfigJson == null ? null : new MemoryStream(tokenizerConfigJson, writable: false);
+            using (sentencePieceModelStream)
+            using (tokenizerConfigStream)
+            {
+                return CreateFromTokenizerJson(tokenizerJsonStream, sentencePieceModelStream, tokenizerConfigStream);
+            }
         }
 
-        public ITokenizer CreateFromTokenizerJson(Stream tokenizerJsonStream)
+        public ITokenizer CreateFromTokenizerJson(Stream tokenizerJsonStream, Stream? sentencePieceModelStream = null, Stream? tokenizerConfigStream = null)
         {
             if (tokenizerJsonStream == null)
             {
                 throw new ArgumentNullException(nameof(tokenizerJsonStream));
             }
 
-            using var reader = new StreamReader(tokenizerJsonStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 1024, leaveOpen: true);
-            var root = _jsonSerializer.ParseObject(reader.ReadToEnd());
-            var pipeline = ParseTokenizerJsonPipeline(root);
+            var root = ParseJsonObject(tokenizerJsonStream);
+            var tokenizerConfigRoot = ParseOptionalJsonObject(tokenizerConfigStream);
+            var pipeline = ParseTokenizerJsonPipeline(root, tokenizerConfigRoot: tokenizerConfigRoot);
 
-            if (pipeline.BackendType != TokenizerBackendType.WordPiece && pipeline.BackendType != TokenizerBackendType.Bpe)
+            if (pipeline.BackendType == TokenizerBackendType.WordPiece || pipeline.BackendType == TokenizerBackendType.Bpe)
             {
-                throw TokenizerModelRuntimeFactory.CreateUnsupportedBackendException(
-                    pipeline.Name,
-                    pipeline.BackendType,
-                    "In-memory tokenizer.json loading currently supports only self-contained WordPiece and BPE tokenizer.json payloads.");
+                return Create(pipeline);
             }
 
-            return Create(pipeline);
+            if (pipeline.BackendType == TokenizerBackendType.SentencePieceUnigram && sentencePieceModelStream != null)
+            {
+                return CreateSentencePieceUnigram(pipeline, sentencePieceModelStream, "sentencepiece");
+            }
+
+            if (pipeline.BackendType == TokenizerBackendType.SentencePieceBpe && sentencePieceModelStream != null)
+            {
+                return CreateSentencePieceBpe(pipeline, sentencePieceModelStream, "sentencepiece");
+            }
+
+            throw TokenizerModelRuntimeFactory.CreateUnsupportedBackendException(
+                pipeline.Name,
+                pipeline.BackendType,
+                "In-memory tokenizer.json loading supports self-contained WordPiece and BPE payloads. SentencePiece tokenizer.json payloads also require the companion .model bytes or stream.");
         }
 
         public ITokenizer CreateWordPiece(string vocabPath, WordPieceTokenizerOptions? options = null)
@@ -122,7 +138,7 @@ namespace KitsuMate.Tokenizers.Core
             return CreateTiktokenRuntime(vocabStream, encodingName);
         }
 
-        public ITokenizer CreateSentencePiece(byte[] model, TokenizerBackendType backendType, bool applyIdOffset = false, bool addDummyPrefix = true)
+        public ITokenizer CreateSentencePieceUnigram(byte[] model, bool applyIdOffset = false)
         {
             if (model == null)
             {
@@ -130,22 +146,38 @@ namespace KitsuMate.Tokenizers.Core
             }
 
             using var modelStream = new MemoryStream(model, writable: false);
-            return CreateSentencePiece(modelStream, backendType, applyIdOffset, addDummyPrefix);
+            return CreateSentencePieceUnigram(modelStream, applyIdOffset);
         }
 
-        public ITokenizer CreateSentencePiece(Stream modelStream, TokenizerBackendType backendType, bool applyIdOffset = false, bool addDummyPrefix = true)
+        public ITokenizer CreateSentencePieceUnigram(Stream modelStream, bool applyIdOffset = false)
         {
             if (modelStream == null)
             {
                 throw new ArgumentNullException(nameof(modelStream));
             }
 
-            return backendType switch
+            return CreateSentencePieceUnigramRuntime(modelStream, applyIdOffset: applyIdOffset);
+        }
+
+        public ITokenizer CreateSentencePieceBpe(byte[] model, bool applyIdOffset = false, bool addDummyPrefix = true)
+        {
+            if (model == null)
             {
-                TokenizerBackendType.SentencePieceUnigram => CreateSentencePieceUnigramRuntime(modelStream, applyIdOffset: applyIdOffset),
-                TokenizerBackendType.SentencePieceBpe => CreateSentencePieceBpeRuntime(modelStream, applyIdOffset: applyIdOffset, addDummyPrefix: addDummyPrefix),
-                _ => throw new ArgumentOutOfRangeException(nameof(backendType), backendType, "SentencePiece factory only supports SentencePiece backend types."),
-            };
+                throw new ArgumentNullException(nameof(model));
+            }
+
+            using var modelStream = new MemoryStream(model, writable: false);
+            return CreateSentencePieceBpe(modelStream, applyIdOffset, addDummyPrefix);
+        }
+
+        public ITokenizer CreateSentencePieceBpe(Stream modelStream, bool applyIdOffset = false, bool addDummyPrefix = true)
+        {
+            if (modelStream == null)
+            {
+                throw new ArgumentNullException(nameof(modelStream));
+            }
+
+            return CreateSentencePieceBpeRuntime(modelStream, applyIdOffset: applyIdOffset, addDummyPrefix: addDummyPrefix);
         }
 
         internal static ITokenizer Create(TokenizerJsonPipeline pipeline)
@@ -308,6 +340,17 @@ namespace KitsuMate.Tokenizers.Core
             return ParseTokenizerJsonPipeline(root, tokenizerJsonPath, tokenizerConfigRoot, resolveSiblingArtifacts: false);
         }
 
+        private JObject ParseJsonObject(Stream jsonStream)
+        {
+            using var reader = new StreamReader(jsonStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 1024, leaveOpen: true);
+            return _jsonSerializer.ParseObject(reader.ReadToEnd());
+        }
+
+        private JObject? ParseOptionalJsonObject(Stream? jsonStream)
+        {
+            return jsonStream == null ? null : ParseJsonObject(jsonStream);
+        }
+
         private TokenizerJsonPipeline ParseTokenizerJsonPipeline(JObject root, string tokenizerJsonPath, JObject? tokenizerConfigRoot, bool resolveSiblingArtifacts)
         {
             var backendType = InferBackendType(root);
@@ -330,7 +373,7 @@ namespace KitsuMate.Tokenizers.Core
             var truncation = ParseTruncation(root["truncation"] as JObject);
             var padding = ParsePadding(root["padding"] as JObject);
             var sentencePieceModelPath = resolveSiblingArtifacts ? FindSentencePieceModelSibling(tokenizerJsonPath) : null;
-            var applySentencePieceIdOffset = sentencePieceModelPath != null && ShouldApplySentencePieceIdOffset(sentencePieceModelPath, tokenizerConfigRoot);
+            var applySentencePieceIdOffset = ShouldApplySentencePieceIdOffset(sentencePieceModelPath, tokenizerConfigRoot);
 
             return new TokenizerJsonPipeline(
                 tokenizerJsonPath,
@@ -538,16 +581,19 @@ namespace KitsuMate.Tokenizers.Core
             }
         }
 
-        private static bool ShouldApplySentencePieceIdOffset(string modelPath, JObject? tokenizerConfigRoot)
+        private static bool ShouldApplySentencePieceIdOffset(string? modelPath, JObject? tokenizerConfigRoot)
         {
-            var directory = Path.GetDirectoryName(modelPath);
-            if (!string.IsNullOrWhiteSpace(directory))
+            if (!string.IsNullOrWhiteSpace(modelPath))
             {
-                var directoryName = Path.GetFileName(directory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                if (directoryName.IndexOf("xlm-roberta", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    directoryName.IndexOf("xlm_roberta", StringComparison.OrdinalIgnoreCase) >= 0)
+                var directory = Path.GetDirectoryName(modelPath);
+                if (!string.IsNullOrWhiteSpace(directory))
                 {
-                    return true;
+                    var directoryName = Path.GetFileName(directory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                    if (directoryName.IndexOf("xlm-roberta", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        directoryName.IndexOf("xlm_roberta", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        return true;
+                    }
                 }
             }
 
@@ -628,16 +674,26 @@ namespace KitsuMate.Tokenizers.Core
         {
             using var stream = File.OpenRead(pipeline.SentencePieceModelPath!);
             var modelName = Path.GetFileNameWithoutExtension(pipeline.SentencePieceModelPath) ?? "sentencepiece";
-            var model = SentencePieceUnigramModel.FromStream(stream, modelName, pipeline.ApplySentencePieceIdOffset);
-            var addedTokensById = TokenizerModelRuntimeFactory.ReadSentencePieceAddedTokens(pipeline.AddedTokens, pipeline.PostProcessorConfig);
-            return CreateSentencePieceUnigramRuntime(model, pipeline.PostProcessor, pipeline.Truncation, pipeline.Padding, pipeline.Normalizer, pipeline.PreTokenizer, pipeline.Decoder, addedTokensById);
+            return CreateSentencePieceUnigram(pipeline, stream, modelName);
         }
 
         private static ITokenizer CreateSentencePieceBpe(TokenizerJsonPipeline pipeline)
         {
             using var stream = File.OpenRead(pipeline.SentencePieceModelPath!);
             var modelName = Path.GetFileNameWithoutExtension(pipeline.SentencePieceModelPath) ?? "sentencepiece";
-            var model = SentencePieceBpeModel.FromStream(stream, modelName, pipeline.ApplySentencePieceIdOffset, pipeline.AddDummyPrefixForSentencePieceBpe);
+            return CreateSentencePieceBpe(pipeline, stream, modelName);
+        }
+
+        private static ITokenizer CreateSentencePieceUnigram(TokenizerJsonPipeline pipeline, Stream modelStream, string modelName)
+        {
+            var model = SentencePieceUnigramModel.FromStream(modelStream, modelName, pipeline.ApplySentencePieceIdOffset);
+            var addedTokensById = TokenizerModelRuntimeFactory.ReadSentencePieceAddedTokens(pipeline.AddedTokens, pipeline.PostProcessorConfig);
+            return CreateSentencePieceUnigramRuntime(model, pipeline.PostProcessor, pipeline.Truncation, pipeline.Padding, pipeline.Normalizer, pipeline.PreTokenizer, pipeline.Decoder, addedTokensById);
+        }
+
+        private static ITokenizer CreateSentencePieceBpe(TokenizerJsonPipeline pipeline, Stream modelStream, string modelName)
+        {
+            var model = SentencePieceBpeModel.FromStream(modelStream, modelName, pipeline.ApplySentencePieceIdOffset, pipeline.AddDummyPrefixForSentencePieceBpe);
             var addedTokensById = TokenizerModelRuntimeFactory.ReadSentencePieceAddedTokens(pipeline.AddedTokens, pipeline.PostProcessorConfig);
             return CreateSentencePieceBpeRuntime(model, pipeline.PostProcessor, pipeline.Truncation, pipeline.Padding, pipeline.Normalizer, pipeline.PreTokenizer, pipeline.Decoder, addedTokensById);
         }

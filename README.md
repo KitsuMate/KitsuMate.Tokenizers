@@ -42,15 +42,26 @@ using System.Text;
 var fromDirectory = Tokenizer.FromLocal("path/to/model-directory");
 var fromTokenizerJson = Tokenizer.FromTokenizerJson("path/to/tokenizer.json");
 var fromTokenizerJsonBytes = Tokenizer.FromTokenizerJson(Encoding.UTF8.GetBytes(tokenizerJsonText));
+var fromSentencePieceTokenizerJsonBytes = Tokenizer.FromTokenizerJson(
+  Encoding.UTF8.GetBytes(tokenizerJsonText),
+  File.ReadAllBytes("spiece.model"));
 
 using var tokenizerJsonStream = File.OpenRead("path/to/tokenizer.json");
 var fromTokenizerJsonStream = Tokenizer.FromTokenizerJson(tokenizerJsonStream);
+
+using var tokenizerJsonStreamWithSentencePiece = File.OpenRead("path/to/tokenizer.json");
+using var sentencePieceModelStream = File.OpenRead("spiece.model");
+var fromSentencePieceTokenizerJsonStream = Tokenizer.FromTokenizerJson(
+  tokenizerJsonStreamWithSentencePiece,
+  sentencePieceModelStream);
 
 var fromHub = Tokenizer.FromPretrained("intfloat/e5-small-v2");
 var fromUrl = Tokenizer.Load("https://huggingface.co/bert-base-uncased");
 ```
 
-In-memory `tokenizer.json` loading currently supports self-contained WordPiece and BPE payloads. If your `tokenizer.json` depends on sibling files such as `*.model`, keep using the file-based `Tokenizer.FromTokenizerJson("path/to/tokenizer.json")` or `Tokenizer.FromLocal(...)` entry points.
+In-memory `tokenizer.json` loading supports self-contained WordPiece and BPE payloads directly. SentencePiece tokenizer.json payloads also work in memory when you pass the companion `*.model` bytes or stream. If you only have file paths, `Tokenizer.FromTokenizerJson("path/to/tokenizer.json")` and `Tokenizer.FromLocal(...)` still resolve sibling artifacts automatically.
+
+If you have `tokenizer_config.json` in memory too, pass it as the third argument so config-driven behaviors such as XLM-R style ID offsets stay aligned with the file-based loader.
 
 Downloaded Hub models are cached under `~/.cache/kitsumate-tokenizers/hub/`.
 
@@ -105,18 +116,15 @@ var bpeFromStreams = Tokenizer.CreateBpe(
   bpeVocabStream,
   bpeMergesStream);
 
-var sentencePiece = Tokenizer.CreateSentencePiece(
-  "sentencepiece.model",
-  TokenizerBackendType.SentencePieceUnigram);
+var sentencePiece = Tokenizer.CreateSentencePieceUnigram("sentencepiece.model");
 
-var sentencePieceFromBytes = Tokenizer.CreateSentencePiece(
-  File.ReadAllBytes("sentencepiece.model"),
-  TokenizerBackendType.SentencePieceUnigram);
+var sentencePieceFromBytes = Tokenizer.CreateSentencePieceUnigram(
+  File.ReadAllBytes("sentencepiece.model"));
 
 using var sentencePieceStream = File.OpenRead("sentencepiece.model");
-var sentencePieceFromStream = Tokenizer.CreateSentencePiece(
-  sentencePieceStream,
-  TokenizerBackendType.SentencePieceUnigram);
+var sentencePieceFromStream = Tokenizer.CreateSentencePieceUnigram(sentencePieceStream);
+
+var sentencePieceBpe = Tokenizer.CreateSentencePieceBpe("sentencepiece.bpe.model");
 
 var tiktoken = Tokenizer.CreateTiktoken("gpt2.tiktoken", encodingName: "gpt2");
 var tiktokenFromBytes = Tokenizer.CreateTiktoken(File.ReadAllBytes("gpt2.tiktoken"), encodingName: "gpt2");

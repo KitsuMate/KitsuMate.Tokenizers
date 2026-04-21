@@ -68,7 +68,11 @@ namespace KitsuMate.Tokenizers.Core
                 var backendType = DetectSentencePieceBackendType(modelDirectory, tokenizerConfigRoot);
                 var applyIdOffset = ShouldApplySentencePieceIdOffset(modelDirectory, tokenizerConfigRoot);
                 using var stream = File.OpenRead(sentencePieceModel);
-                return factory.CreateSentencePiece(stream, backendType, applyIdOffset);
+                return backendType switch
+                {
+                    TokenizerBackendType.SentencePieceBpe => factory.CreateSentencePieceBpe(stream, applyIdOffset),
+                    _ => factory.CreateSentencePieceUnigram(stream, applyIdOffset),
+                };
             }
 
             var vocabTxtPath = Path.Combine(modelDirectory, "vocab.txt");

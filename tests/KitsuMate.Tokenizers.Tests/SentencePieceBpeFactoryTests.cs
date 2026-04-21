@@ -14,7 +14,7 @@ namespace KitsuMate.Tokenizers.Tests
             var nonexistentPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".model");
 
             var exception = Assert.Throws<FileNotFoundException>(() =>
-                Tokenizer.CreateSentencePiece(nonexistentPath, TokenizerBackendType.SentencePieceBpe));
+                Tokenizer.CreateSentencePieceBpe(nonexistentPath));
 
             Assert.Contains("Model file not found", exception.Message);
             Assert.Contains(nonexistentPath, exception.Message);
@@ -26,7 +26,7 @@ namespace KitsuMate.Tokenizers.Tests
             var factory = new TokenizerFactory();
 
             var exception = Assert.Throws<ArgumentNullException>(() =>
-                factory.CreateSentencePiece((Stream)null!, TokenizerBackendType.SentencePieceBpe));
+                factory.CreateSentencePieceBpe((Stream)null!));
 
             Assert.Equal("modelStream", exception.ParamName);
         }
@@ -38,7 +38,7 @@ namespace KitsuMate.Tokenizers.Tests
             using var emptyStream = new MemoryStream();
 
             Assert.ThrowsAny<Exception>(() =>
-                factory.CreateSentencePiece(emptyStream, TokenizerBackendType.SentencePieceBpe));
+                factory.CreateSentencePieceBpe(emptyStream));
         }
 
         [Fact]
@@ -48,18 +48,18 @@ namespace KitsuMate.Tokenizers.Tests
             using var invalidStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 });
 
             Assert.ThrowsAny<Exception>(() =>
-                factory.CreateSentencePiece(invalidStream, TokenizerBackendType.SentencePieceBpe));
+                factory.CreateSentencePieceBpe(invalidStream));
         }
 
         [Fact]
         public void SharedSentencePieceFactorySurfaces_AreAvailableForBpe()
         {
             var tokenizerMethod = typeof(Tokenizer).GetMethod(
-                nameof(Tokenizer.CreateSentencePiece),
-                new[] { typeof(string), typeof(TokenizerBackendType), typeof(bool), typeof(bool) });
+                nameof(Tokenizer.CreateSentencePieceBpe),
+                new[] { typeof(string), typeof(bool), typeof(bool) });
             var factoryMethod = typeof(TokenizerFactory).GetMethod(
-                nameof(TokenizerFactory.CreateSentencePiece),
-                new[] { typeof(Stream), typeof(TokenizerBackendType), typeof(bool), typeof(bool) });
+                nameof(TokenizerFactory.CreateSentencePieceBpe),
+                new[] { typeof(Stream), typeof(bool), typeof(bool) });
 
             Assert.NotNull(tokenizerMethod);
             Assert.NotNull(factoryMethod);

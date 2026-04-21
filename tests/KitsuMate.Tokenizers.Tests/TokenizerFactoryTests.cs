@@ -134,7 +134,7 @@ namespace KitsuMate.Tokenizers.Tests
             {
                 File.WriteAllBytes(modelPath, SentencePieceTestData.CreateSimpleUnigramModel());
 
-                var tokenizer = Tokenizer.CreateSentencePiece(modelPath, TokenizerBackendType.SentencePieceUnigram);
+                var tokenizer = Tokenizer.CreateSentencePieceUnigram(modelPath);
                 var encoding = tokenizer.Encode("hello");
 
                 Assert.IsType<Tokenizer>(tokenizer);
@@ -155,9 +155,9 @@ namespace KitsuMate.Tokenizers.Tests
         public void CreateSentencePiece_ExposesSharedSentencePieceScaffoldPubliclyFromBytesAndStream()
         {
             var model = SentencePieceTestData.CreateSimpleUnigramModel();
-            var fromBytes = Tokenizer.CreateSentencePiece(model, TokenizerBackendType.SentencePieceUnigram);
+            var fromBytes = Tokenizer.CreateSentencePieceUnigram(model);
             using var modelStream = new MemoryStream(model, writable: false);
-            var fromStream = Tokenizer.CreateSentencePiece(modelStream, TokenizerBackendType.SentencePieceUnigram);
+            var fromStream = Tokenizer.CreateSentencePieceUnigram(modelStream);
 
             Assert.Equal(new[] { 3, 4 }, fromBytes.Encode("hello").Ids);
             Assert.Equal(new[] { 3, 4 }, fromStream.Encode("hello").Ids);
@@ -203,6 +203,122 @@ namespace KitsuMate.Tokenizers.Tests
             Assert.Equal(new[] { 1 }, fromBytes.EncodeToIds("HELLO", addSpecialTokens: false));
             Assert.Equal(new[] { 1 }, fromStream.EncodeToIds("HELLO", addSpecialTokens: false));
         }
+
+                [Fact]
+                public void FromTokenizerJson_LoadsSelfContainedBpeThroughBytesAndStream()
+                {
+                        var tokenizerJson = Encoding.UTF8.GetBytes("""
+                        {
+                            "decoder": {
+                                "type": "BPEDecoder",
+                                "suffix": "</w>"
+                            },
+                            "model": {
+                                "type": "BPE",
+                                "vocab": {
+                                    "[UNK]": 0,
+                                    "h": 1,
+                                    "e": 2,
+                                    "l": 3,
+                                    "o</w>": 4,
+                                    "he": 5,
+                                    "hel": 6,
+                                    "hell": 7,
+                                    "hello</w>": 8,
+                                    "w": 9,
+                                    "o": 10,
+                                    "r": 11,
+                                    "d</w>": 12,
+                                    "wo": 13,
+                                    "wor": 14,
+                                    "worl": 15,
+                                    "world</w>": 16
+                                },
+                                "unk_token": "[UNK]",
+                                "end_of_word_suffix": "</w>",
+                                "merges": ["h e", "he l", "hel l", "hell o</w>", "w o", "wo r", "wor l", "worl d</w>"]
+                            }
+                        }
+                        """);
+
+                        var fromBytes = Tokenizer.FromTokenizerJson(tokenizerJson);
+                        using var tokenizerJsonStream = new MemoryStream(tokenizerJson, writable: false);
+                        var fromStream = Tokenizer.FromTokenizerJson(tokenizerJsonStream);
+
+                        Assert.Equal(new[] { 8, 16 }, fromBytes.EncodeToIds("hello world", addSpecialTokens: false));
+                        Assert.Equal(new[] { 8, 16 }, fromStream.EncodeToIds("hello world", addSpecialTokens: false));
+                        Assert.Equal("hello world", fromBytes.Decode(new[] { 8, 16 }));
+                }
+
+                [Fact]
+                public void FromTokenizerJson_LoadsSentencePieceUnigramThroughBytesWhenModelBytesProvided()
+                {
+                        var tokenizerJson = Encoding.UTF8.GetBytes("""
+                        {
+                            "model": {
+                                "type": "Unigram",
+                                "scores": [ -1.0 ]
+                            }
+                        }
+                        """);
+                        var tokenizerConfigJson = Encoding.UTF8.GetBytes("""
+                        {
+                            "model_type": "xlm-roberta"
+                        }
+                        """);
+                        var modelBytes = SentencePieceTestData.CreateSimpleUnigramModel();
+
+                        var fromBytes = Tokenizer.FromTokenizerJson(tokenizerJson, modelBytes, tokenizerConfigJson);
+                        using var tokenizerJsonStream = new MemoryStream(tokenizerJson, writable: false);
+                        using var modelStream = new MemoryStream(modelBytes, writable: false);
+                        using var tokenizerConfigStream = new MemoryStream(tokenizerConfigJson, writable: false);
+                        var fromStream = Tokenizer.FromTokenizerJson(tokenizerJsonStream, modelStream, tokenizerConfigStream);
+
+                        Assert.Equal(TokenizerBackendType.SentencePieceUnigram, fromBytes.BackendType);
+                        Assert.Equal(new[] { 3, 5 }, fromBytes.Encode("hello").Ids);
+                        Assert.Equal(new[] { 3, 5 }, fromStream.Encode("hello").Ids);
+                }
+
+                [Fact]
+                public void FromTokenizerJson_LoadsSentencePieceBpeThroughBytesWhenModelBytesProvided()
+                {
+                        var tokenizerJson = Encoding.UTF8.GetBytes("""
+                        {
+                            "model": {
+                                "type": "SentencePieceBPE"
+                            }
+                        }
+                        """);
+                        var modelBytes = SentencePieceTestData.CreateSimpleBpeModel();
+
+                        var fromBytes = Tokenizer.FromTokenizerJson(tokenizerJson, modelBytes);
+                        using var tokenizerJsonStream = new MemoryStream(tokenizerJson, writable: false);
+                        using var modelStream = new MemoryStream(modelBytes, writable: false);
+                        var fromStream = Tokenizer.FromTokenizerJson(tokenizerJsonStream, modelStream);
+
+                        Assert.Equal(TokenizerBackendType.SentencePieceBpe, fromBytes.BackendType);
+                        Assert.Equal(new[] { 13 }, fromBytes.Encode("hello").Ids);
+                        Assert.Equal(new[] { 13 }, fromStream.Encode("hello").Ids);
+                        Assert.Equal("hello", fromBytes.Decode(new[] { 13 }));
+                }
+
+                [Fact]
+                public void FromTokenizerJson_ThrowsForSentencePieceBytesWithoutModelBytes()
+                {
+                        var tokenizerJson = Encoding.UTF8.GetBytes("""
+                        {
+                            "model": {
+                                "type": "Unigram",
+                                "scores": [ -1.0 ]
+                            }
+                        }
+                        """);
+
+                        var exception = Assert.Throws<TokenizerNotSupportedException>(() => Tokenizer.FromTokenizerJson(tokenizerJson));
+
+                        Assert.Equal(TokenizerBackendType.SentencePieceUnigram, exception.BackendType);
+                        Assert.Contains("companion .model", exception.Message, StringComparison.Ordinal);
+                }
 
         [Fact]
         public void FromLocal_LoadsLocalGpt2FixtureThroughTokenizerLoader()

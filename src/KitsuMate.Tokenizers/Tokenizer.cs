@@ -216,14 +216,14 @@ namespace KitsuMate.Tokenizers
             return RequireConcrete(new TokenizerFactory().CreateFromTokenizerJson(tokenizerJsonPath));
         }
 
-        public static Tokenizer FromTokenizerJson(byte[] tokenizerJson)
+        public static Tokenizer FromTokenizerJson(byte[] tokenizerJson, byte[]? sentencePieceModel = null, byte[]? tokenizerConfigJson = null)
         {
-            return RequireConcrete(new TokenizerFactory().CreateFromTokenizerJson(tokenizerJson));
+            return RequireConcrete(new TokenizerFactory().CreateFromTokenizerJson(tokenizerJson, sentencePieceModel, tokenizerConfigJson));
         }
 
-        public static Tokenizer FromTokenizerJson(Stream tokenizerJsonStream)
+        public static Tokenizer FromTokenizerJson(Stream tokenizerJsonStream, Stream? sentencePieceModelStream = null, Stream? tokenizerConfigStream = null)
         {
-            return RequireConcrete(new TokenizerFactory().CreateFromTokenizerJson(tokenizerJsonStream));
+            return RequireConcrete(new TokenizerFactory().CreateFromTokenizerJson(tokenizerJsonStream, sentencePieceModelStream, tokenizerConfigStream));
         }
 
         public static Tokenizer Create(ITokenizerModel model)
@@ -281,24 +281,34 @@ namespace KitsuMate.Tokenizers
             return RequireConcrete(TokenizerFactory.CreateTiktokenRuntime(vocabStream, encodingName));
         }
 
-        public static Tokenizer CreateSentencePiece(string modelPath, TokenizerBackendType backendType, bool applyIdOffset = false, bool addDummyPrefix = true)
+        public static Tokenizer CreateSentencePieceUnigram(string modelPath, bool applyIdOffset = false)
         {
-            return RequireConcrete(backendType switch
-            {
-                TokenizerBackendType.SentencePieceUnigram => TokenizerFactory.CreateSentencePieceUnigramRuntime(modelPath, applyIdOffset),
-                TokenizerBackendType.SentencePieceBpe => TokenizerFactory.CreateSentencePieceBpeRuntime(modelPath, applyIdOffset, addDummyPrefix),
-                _ => throw new ArgumentOutOfRangeException(nameof(backendType), backendType, "SentencePiece creation requires a SentencePiece backend type."),
-            });
+            return RequireConcrete(TokenizerFactory.CreateSentencePieceUnigramRuntime(modelPath, applyIdOffset));
         }
 
-        public static Tokenizer CreateSentencePiece(byte[] model, TokenizerBackendType backendType, bool applyIdOffset = false, bool addDummyPrefix = true)
+        public static Tokenizer CreateSentencePieceUnigram(byte[] model, bool applyIdOffset = false)
         {
-            return RequireConcrete(new TokenizerFactory().CreateSentencePiece(model, backendType, applyIdOffset, addDummyPrefix));
+            return RequireConcrete(new TokenizerFactory().CreateSentencePieceUnigram(model, applyIdOffset));
         }
 
-        public static Tokenizer CreateSentencePiece(Stream modelStream, TokenizerBackendType backendType, bool applyIdOffset = false, bool addDummyPrefix = true)
+        public static Tokenizer CreateSentencePieceUnigram(Stream modelStream, bool applyIdOffset = false)
         {
-            return RequireConcrete(new TokenizerFactory().CreateSentencePiece(modelStream, backendType, applyIdOffset, addDummyPrefix));
+            return RequireConcrete(new TokenizerFactory().CreateSentencePieceUnigram(modelStream, applyIdOffset));
+        }
+
+        public static Tokenizer CreateSentencePieceBpe(string modelPath, bool applyIdOffset = false, bool addDummyPrefix = true)
+        {
+            return RequireConcrete(TokenizerFactory.CreateSentencePieceBpeRuntime(modelPath, applyIdOffset, addDummyPrefix));
+        }
+
+        public static Tokenizer CreateSentencePieceBpe(byte[] model, bool applyIdOffset = false, bool addDummyPrefix = true)
+        {
+            return RequireConcrete(new TokenizerFactory().CreateSentencePieceBpe(model, applyIdOffset, addDummyPrefix));
+        }
+
+        public static Tokenizer CreateSentencePieceBpe(Stream modelStream, bool applyIdOffset = false, bool addDummyPrefix = true)
+        {
+            return RequireConcrete(new TokenizerFactory().CreateSentencePieceBpe(modelStream, applyIdOffset, addDummyPrefix));
         }
 
         public IReadOnlyList<int> EncodeToIds(string text, bool addSpecialTokens = true, int maxTokenCount = int.MaxValue)

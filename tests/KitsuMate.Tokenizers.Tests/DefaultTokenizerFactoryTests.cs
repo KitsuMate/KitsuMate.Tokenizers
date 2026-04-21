@@ -477,14 +477,14 @@ namespace KitsuMate.Tokenizers.Tests
         }
 
         [Fact]
-        public void CreateSentencePiece_RejectsNonSentencePieceBackendTypes()
+        public void CreateSentencePieceUnigram_RejectsBpeModels()
         {
             var factory = new TokenizerFactory();
-            using var stream = new MemoryStream();
+            using var stream = new MemoryStream(SentencePieceTestData.CreateSimpleBpeModel());
 
-            var exception = Assert.Throws<ArgumentOutOfRangeException>(() => factory.CreateSentencePiece(stream, TokenizerBackendType.Bpe));
+            var exception = Assert.Throws<NotSupportedException>(() => factory.CreateSentencePieceUnigram(stream));
 
-            Assert.Equal("backendType", exception.ParamName);
+            Assert.Contains("Unigram", exception.Message);
         }
 
         [Fact]
@@ -493,7 +493,7 @@ namespace KitsuMate.Tokenizers.Tests
             var factory = new TokenizerFactory();
             using var stream = new MemoryStream(SentencePieceTestData.CreateSimpleUnigramModel());
 
-            var tokenizer = factory.CreateSentencePiece(stream, TokenizerBackendType.SentencePieceUnigram);
+            var tokenizer = factory.CreateSentencePieceUnigram(stream);
             var encoding = tokenizer.Encode("hello");
 
             Assert.Equal(TokenizerBackendType.SentencePieceUnigram, tokenizer.BackendType);
@@ -512,7 +512,7 @@ namespace KitsuMate.Tokenizers.Tests
                 escapeWhitespaces: false,
                 treatWhitespaceAsSuffix: false));
 
-            var tokenizer = factory.CreateSentencePiece(stream, TokenizerBackendType.SentencePieceUnigram);
+            var tokenizer = factory.CreateSentencePieceUnigram(stream);
             var encoding = tokenizer.Encode("   hello   ");
 
             Assert.Equal(new[] { 3, 4 }, encoding.Ids);
@@ -526,7 +526,7 @@ namespace KitsuMate.Tokenizers.Tests
             var factory = new TokenizerFactory();
             using var stream = new MemoryStream(SentencePieceTestData.CreateDummyPrefixUnigramModel());
 
-            var tokenizer = factory.CreateSentencePiece(stream, TokenizerBackendType.SentencePieceUnigram);
+            var tokenizer = factory.CreateSentencePieceUnigram(stream);
             var encoding = tokenizer.Encode("hello");
 
             Assert.Equal(new[] { 3, 4 }, encoding.Ids);
@@ -540,7 +540,7 @@ namespace KitsuMate.Tokenizers.Tests
             var factory = new TokenizerFactory();
             using var stream = new MemoryStream(SentencePieceTestData.CreateCharsMapUnigramModel());
 
-            var tokenizer = factory.CreateSentencePiece(stream, TokenizerBackendType.SentencePieceUnigram);
+            var tokenizer = factory.CreateSentencePieceUnigram(stream);
             var encoding = tokenizer.Encode("héllo");
 
             Assert.Equal(new[] { 3, 4 }, encoding.Ids);
@@ -598,7 +598,7 @@ namespace KitsuMate.Tokenizers.Tests
             var factory = new TokenizerFactory();
             using var stream = new MemoryStream(SentencePieceTestData.CreateSimpleBpeModel());
 
-            var tokenizer = factory.CreateSentencePiece(stream, TokenizerBackendType.SentencePieceBpe);
+            var tokenizer = factory.CreateSentencePieceBpe(stream);
             var encoding = tokenizer.Encode("hello");
 
             Assert.Equal(TokenizerBackendType.SentencePieceBpe, tokenizer.BackendType);
@@ -998,7 +998,7 @@ namespace KitsuMate.Tokenizers.Tests
         public void CreateSentencePiece_CreatesWorkingTokenizerFromBytes()
         {
             var factory = new TokenizerFactory();
-            var tokenizer = factory.CreateSentencePiece(SentencePieceTestData.CreateSimpleUnigramModel(), TokenizerBackendType.SentencePieceUnigram);
+            var tokenizer = factory.CreateSentencePieceUnigram(SentencePieceTestData.CreateSimpleUnigramModel());
             var encoding = tokenizer.Encode("hello");
 
             Assert.Equal(TokenizerBackendType.SentencePieceUnigram, tokenizer.BackendType);
