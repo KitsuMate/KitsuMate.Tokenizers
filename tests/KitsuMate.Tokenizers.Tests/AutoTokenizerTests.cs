@@ -310,5 +310,28 @@ world
                 }
             }
         }
+
+        [Fact]
+        public void Tokenizer_FromLocal_ThrowsWhenFallbackToOtherVariantsDisabled()
+        {
+            var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+
+            try
+            {
+                File.WriteAllText(Path.Combine(tempDir, "tokenizer.json"), "{ not valid json }");
+                File.WriteAllText(Path.Combine(tempDir, "vocab.txt"), TestVocab);
+
+                Assert.ThrowsAny<Exception>(() =>
+                    Tokenizer.FromLocal(tempDir, new TokenizerLoadOptions { FallbackToOtherVariants = false }));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, true);
+                }
+            }
+        }
     }
 }

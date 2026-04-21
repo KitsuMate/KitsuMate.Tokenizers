@@ -80,6 +80,54 @@ namespace KitsuMate.Tokenizers.Tests
         }
 
         [Fact]
+        public void FromLocal_ThrowsOriginalErrorWhenFallbackToOtherVariantsDisabledAndTokenizerJsonIsMalformed()
+        {
+            var directory = CreateTempDirectory();
+
+            try
+            {
+                File.WriteAllText(Path.Combine(directory, "tokenizer.json"), "{ not valid json }");
+                File.WriteAllText(Path.Combine(directory, "vocab.txt"), "[PAD]\n[UNK]\n[CLS]\n[SEP]\nhello\n");
+
+                var exception = Assert.ThrowsAny<Exception>(() =>
+                    TokenizerLoader.FromLocal(directory, new TokenizerLoadOptions { FallbackToOtherVariants = false }));
+
+                Assert.DoesNotContain("Could not detect tokenizer type", exception.Message, StringComparison.Ordinal);
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Fact]
+        public void FromLocal_ThrowsUnsupportedErrorWhenFallbackToOtherVariantsDisabled()
+        {
+            var directory = CreateTempDirectory();
+
+            try
+            {
+                File.WriteAllText(Path.Combine(directory, "tokenizer.json"), """
+                {
+                  "model": {
+                    "type": "UnsupportedType"
+                  }
+                }
+                """);
+                File.WriteAllText(Path.Combine(directory, "vocab.txt"), "[PAD]\n[UNK]\n[CLS]\n[SEP]\nhello\n");
+
+                var exception = Assert.Throws<TokenizerNotSupportedException>(() =>
+                    TokenizerLoader.FromLocal(directory, new TokenizerLoadOptions { FallbackToOtherVariants = false }));
+
+                Assert.Equal(TokenizerBackendType.Unknown, exception.BackendType);
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Fact]
         public void FromLocal_ThrowsWhenTokenizerJsonIsUnsupportedAndNoFallbackArtifactsExist()
         {
             var directory = CreateTempDirectory();

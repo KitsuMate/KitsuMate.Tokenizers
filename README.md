@@ -255,25 +255,13 @@ Per-call `TokenizerEncodeOptions` still override direction and max-length behavi
 - `*.model`
 - `.tiktoken`
 
-## Logging
-
-Logging is optional and integrates with `Microsoft.Extensions.Logging`.
+If `tokenizer.json` is present but unsupported or malformed, loading falls back to sibling artifacts by default. To make `tokenizer.json` authoritative instead, disable that behavior:
 
 ```csharp
-using KitsuMate.Tokenizers;
-using KitsuMate.Tokenizers.Logging;
-using Microsoft.Extensions.Logging;
-
-TokenizerLogger.LoggerFactory = LoggerFactory.Create(builder =>
-{
-  builder.AddConsole();
-  builder.SetMinimumLevel(LogLevel.Warning);
-});
-
-var tokenizer = Tokenizer.Load("path/to/model");
+var tokenizer = Tokenizer.FromLocal(
+  "path/to/model-directory",
+  new TokenizerLoadOptions { FallbackToOtherVariants = false });
 ```
-
-Warnings are emitted for fallback loading paths, unsupported or malformed tokenizer metadata, and similar recovery scenarios.
 
 ## Notes
 

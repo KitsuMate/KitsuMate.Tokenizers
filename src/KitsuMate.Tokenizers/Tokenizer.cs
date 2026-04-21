@@ -143,7 +143,7 @@ namespace KitsuMate.Tokenizers
             set => _padding = value;
         }
 
-        public static Tokenizer Load(string pathOrUrl, HttpMessageInvoker? httpClient = null)
+        public static Tokenizer Load(string pathOrUrl, HttpMessageInvoker? httpClient = null, TokenizerLoadOptions? loadOptions = null)
         {
             if (string.IsNullOrWhiteSpace(pathOrUrl))
             {
@@ -152,7 +152,7 @@ namespace KitsuMate.Tokenizers
 
             if (Directory.Exists(pathOrUrl))
             {
-                return FromLocal(pathOrUrl);
+                return FromLocal(pathOrUrl, loadOptions);
             }
 
             if (Uri.TryCreate(pathOrUrl, UriKind.Absolute, out var uri) &&
@@ -168,10 +168,10 @@ namespace KitsuMate.Tokenizers
                 }
             }
 
-            return FromPretrained(pathOrUrl, httpClient);
+            return FromPretrained(pathOrUrl, httpClient, revision: null, loadOptions: loadOptions);
         }
 
-        public static Tokenizer FromPretrained(string modelId, HttpMessageInvoker? httpClient = null, string? revision = null)
+        public static Tokenizer FromPretrained(string modelId, HttpMessageInvoker? httpClient = null, string? revision = null, TokenizerLoadOptions? loadOptions = null)
         {
             if (string.IsNullOrWhiteSpace(modelId))
             {
@@ -186,7 +186,7 @@ namespace KitsuMate.Tokenizers
                     .GetAwaiter()
                     .GetResult();
 
-                return FromLocal(localPath);
+                return FromLocal(localPath, loadOptions);
             }
             finally
             {
@@ -194,12 +194,12 @@ namespace KitsuMate.Tokenizers
             }
         }
 
-        public static Tokenizer FromLocal(string modelDirectory)
+        public static Tokenizer FromLocal(string modelDirectory, TokenizerLoadOptions? loadOptions = null)
         {
-            return RequireConcrete(TokenizerLoader.FromLocal(modelDirectory));
+            return RequireConcrete(TokenizerLoader.FromLocal(modelDirectory, loadOptions));
         }
 
-        public static Tokenizer FromTokenizerJson(string tokenizerJsonPath)
+        public static Tokenizer FromTokenizerJson(string tokenizerJsonPath, TokenizerLoadOptions? loadOptions = null)
         {
             if (!File.Exists(tokenizerJsonPath))
             {
@@ -210,7 +210,7 @@ namespace KitsuMate.Tokenizers
             if (!string.IsNullOrWhiteSpace(modelDirectory) &&
                 string.Equals(Path.GetFileName(tokenizerJsonPath), "tokenizer.json", StringComparison.OrdinalIgnoreCase))
             {
-                return FromLocal(modelDirectory);
+                return FromLocal(modelDirectory, loadOptions);
             }
 
             return RequireConcrete(new TokenizerFactory().CreateFromTokenizerJson(tokenizerJsonPath));

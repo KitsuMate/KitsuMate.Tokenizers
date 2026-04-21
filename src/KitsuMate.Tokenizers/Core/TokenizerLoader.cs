@@ -1,8 +1,6 @@
 using System;
 using System.IO;
 using Newtonsoft.Json.Linq;
-using KitsuMate.Tokenizers.Logging;
-using Microsoft.Extensions.Logging;
 
 namespace KitsuMate.Tokenizers.Core
 {
@@ -11,9 +9,7 @@ namespace KitsuMate.Tokenizers.Core
     /// </summary>
     public static class TokenizerLoader
     {
-        private static ILogger Logger => TokenizerLogger.CreateLogger("TokenizerLoader");
-
-        public static ITokenizer FromLocal(string modelDirectory, TokenizerFactory? factory = null, ITokenizerJsonSerializer? jsonSerializer = null)
+        public static ITokenizer FromLocal(string modelDirectory, TokenizerLoadOptions? loadOptions = null, TokenizerFactory? factory = null, ITokenizerJsonSerializer? jsonSerializer = null)
         {
             if (string.IsNullOrWhiteSpace(modelDirectory))
             {
@@ -25,6 +21,7 @@ namespace KitsuMate.Tokenizers.Core
                 throw new DirectoryNotFoundException($"Directory not found: {modelDirectory}");
             }
 
+            loadOptions ??= new TokenizerLoadOptions();
             factory ??= new TokenizerFactory(jsonSerializer);
             jsonSerializer ??= new DefaultTokenizerJsonSerializer();
             var tokenizerConfigRoot = LoadTokenizerConfigRoot(modelDirectory, jsonSerializer);
@@ -40,24 +37,26 @@ namespace KitsuMate.Tokenizers.Core
                 }
                 catch (TokenizerNotSupportedException ex)
                 {
+                    if (!loadOptions.FallbackToOtherVariants)
+                    {
+                        throw;
+                    }
+
                     deferredUnsupportedBackend = ex;
-                    Logger.LogWarning(
-                        ex,
-                        "tokenizer.json resolved to an unsupported native tokenizer ({BackendType}). Falling back to sibling artifacts in {ModelDirectory}.",
-                        ex.BackendType,
-                        modelDirectory);
                 }
-                catch (NotSupportedException ex)
+                catch (NotSupportedException)
                 {
-                    Logger.LogWarning(ex,
-                        "Failed to load tokenizer from tokenizer.json due to unsupported type. Falling back to sibling artifacts in {ModelDirectory}.",
-                        modelDirectory);
+                    if (!loadOptions.FallbackToOtherVariants)
+                    {
+                        throw;
+                    }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    Logger.LogWarning(ex,
-                        "Failed to parse tokenizer.json. Falling back to sibling artifacts in {ModelDirectory}.",
-                        modelDirectory);
+                    if (!loadOptions.FallbackToOtherVariants)
+                    {
+                        throw;
+                    }
                 }
             }
 
