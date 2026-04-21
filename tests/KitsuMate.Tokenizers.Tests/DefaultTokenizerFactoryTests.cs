@@ -290,7 +290,7 @@ namespace KitsuMate.Tokenizers.Tests
         }
 
         [Fact]
-        public void CreateFromTokenizerJson_AppliesPipelineTruncationAndPaddingDuringEncode()
+        public void CreateFromTokenizerJson_DoesNotAutoApplyPipelineTruncationAndPaddingDuringEncode()
         {
             var path = Path.GetTempFileName();
 
@@ -331,10 +331,10 @@ namespace KitsuMate.Tokenizers.Tests
                 var tokenizer = factory.CreateFromTokenizerJson(path);
                 var encoding = tokenizer.Encode("hello world again hello world", addSpecialTokens: false);
 
-                Assert.Equal(new[] { 99, 99, 2, 3, 1, 2 }, encoding.Ids);
-                Assert.Equal(new[] { "<pad>", "<pad>", "world", "again", "hello", "world" }, encoding.Tokens);
-                Assert.Equal(new[] { 3, 3, 0, 0, 0, 0 }, encoding.TypeIds);
-                Assert.Equal(new[] { 0, 0, 1, 1, 1, 1 }, encoding.AttentionMask);
+                Assert.Equal(new[] { 1, 2, 3, 1, 2 }, encoding.Ids);
+                Assert.Equal(new[] { "hello", "world", "again", "hello", "world" }, encoding.Tokens);
+                Assert.Equal(new[] { 0, 0, 0, 0, 0 }, encoding.TypeIds);
+                Assert.Equal(new[] { 1, 1, 1, 1, 1 }, encoding.AttentionMask);
             }
             finally
             {
@@ -346,7 +346,7 @@ namespace KitsuMate.Tokenizers.Tests
         }
 
         [Fact]
-        public void CreateFromTokenizerJson_AppliesPairTruncationBeforePostProcessingAndPaddingAfterward()
+        public void CreateFromTokenizerJson_DoesNotAutoApplyPairTruncationBeforePostProcessingOrPaddingAfterward()
         {
             var path = Path.GetTempFileName();
 
@@ -394,10 +394,10 @@ namespace KitsuMate.Tokenizers.Tests
                 var tokenizer = factory.CreateFromTokenizerJson(path);
                 var encoding = tokenizer.EncodePair("hello world again", "world again", addSpecialTokens: true);
 
-                Assert.Equal(new[] { 99, 99, 10, 2, 3, 11, 2, 3, 11 }, encoding.Ids);
-                Assert.Equal(new[] { "<pad>", "<pad>", "[CLS]", "world", "again", "[SEP]", "world", "again", "[SEP]" }, encoding.Tokens);
-                Assert.Equal(new[] { 7, 7, 0, 0, 0, 0, 1, 1, 1 }, encoding.TypeIds);
-                Assert.Equal(new[] { 0, 0, 1, 1, 1, 1, 1, 1, 1 }, encoding.AttentionMask);
+                Assert.Equal(new[] { 10, 1, 2, 3, 11, 2, 3, 11 }, encoding.Ids);
+                Assert.Equal(new[] { "[CLS]", "hello", "world", "again", "[SEP]", "world", "again", "[SEP]" }, encoding.Tokens);
+                Assert.Equal(new[] { 0, 0, 0, 0, 0, 1, 1, 1 }, encoding.TypeIds);
+                Assert.Equal(new[] { 1, 1, 1, 1, 1, 1, 1, 1 }, encoding.AttentionMask);
             }
             finally
             {
@@ -464,8 +464,8 @@ namespace KitsuMate.Tokenizers.Tests
                 Assert.IsType<WhitespaceSplitPreTokenizer>(pipeline.PreTokenizer);
                 Assert.IsType<BertPostProcessor>(pipeline.PostProcessor);
                 Assert.IsType<BpeDecoder>(pipeline.Decoder);
-                Assert.NotNull(pipeline.Truncation);
-                Assert.NotNull(pipeline.Padding);
+                Assert.Null(pipeline.Truncation);
+                Assert.Null(pipeline.Padding);
             }
             finally
             {
@@ -912,6 +912,88 @@ namespace KitsuMate.Tokenizers.Tests
             Assert.Equal(TokenizerBackendType.WordPiece, fromBytes.BackendType);
             Assert.Equal(new[] { 1 }, fromBytes.EncodeToIds("HELLO", addSpecialTokens: false));
             Assert.Equal(new[] { 1 }, fromStream.EncodeToIds("HELLO", addSpecialTokens: false));
+        }
+
+        [Fact]
+        public void CreateFromTokenizerJson_FromBytesWithUnknownModel_DoesNotTreatMemorySourceAsPath()
+        {
+            var json = Encoding.UTF8.GetBytes("""
+            {
+                "model": {
+                }
+            }
+            """);
+
+            var factory = new TokenizerFactory();
+
+            var exception = Assert.Throws<TokenizerNotSupportedException>(() => factory.CreateFromTokenizerJson(json));
+
+            Assert.Equal(TokenizerBackendType.Unknown, exception.BackendType);
+        }
+
+        [Fact]
+        public void CreateFromTokenizerJson_FromBytes_SupportsObjectShapedPaddingStrategy()
+        {
+            var json = Encoding.UTF8.GetBytes("""
+            {
+                "padding": {
+                    "strategy": {
+                        "Fixed": 8
+                    },
+                    "direction": "Right",
+                    "pad_id": 0,
+                    "pad_type_id": 0,
+                    "pad_token": "[PAD]"
+                },
+                "normalizer": {
+                    "type": "BertNormalizer",
+                    "clean_text": true,
+                    "handle_chinese_chars": true,
+                    "strip_accents": null,
+                    "lowercase": true
+                },
+                "pre_tokenizer": {
+                    "type": "BertPreTokenizer"
+                },
+                "post_processor": {
+                    "type": "TemplateProcessing",
+                    "single": [
+                        { "SpecialToken": { "id": "[CLS]", "type_id": 0 } },
+                        { "Sequence": { "id": "A", "type_id": 0 } },
+                        { "SpecialToken": { "id": "[SEP]", "type_id": 0 } }
+                    ],
+                    "special_tokens": {
+                        "[CLS]": { "id": "[CLS]", "ids": [101], "tokens": ["[CLS]"] },
+                        "[SEP]": { "id": "[SEP]", "ids": [102], "tokens": ["[SEP]"] }
+                    }
+                },
+                "decoder": {
+                    "type": "WordPiece",
+                    "prefix": "##",
+                    "cleanup": true
+                },
+                "model": {
+                    "type": "WordPiece",
+                    "unk_token": "[UNK]",
+                    "continuing_subword_prefix": "##",
+                    "vocab": {
+                        "[PAD]": 0,
+                        "[UNK]": 100,
+                        "[CLS]": 101,
+                        "[SEP]": 102,
+                        "hello": 200
+                    }
+                }
+            }
+            """);
+
+            var factory = new TokenizerFactory();
+            var tokenizer = factory.CreateFromTokenizerJson(json);
+            var encoding = tokenizer.Encode("hello");
+
+            Assert.Equal(TokenizerBackendType.WordPiece, tokenizer.BackendType);
+            Assert.Equal(3, encoding.Ids.Count);
+            Assert.Equal(new[] { 101, 200, 102 }, encoding.Ids);
         }
 
         [Fact]

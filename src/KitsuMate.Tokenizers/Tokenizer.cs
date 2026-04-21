@@ -311,6 +311,16 @@ namespace KitsuMate.Tokenizers
             return RequireConcrete(new TokenizerFactory().CreateSentencePieceBpe(modelStream, applyIdOffset, addDummyPrefix));
         }
 
+        public int? TokenToId(string token)
+        {
+            return _model?.TokenToId(token);
+        }
+
+        public string? IdToToken(int id)
+        {
+            return _model?.IdToToken(id);
+        }
+
         public IReadOnlyList<int> EncodeToIds(string text, bool addSpecialTokens = true, int maxTokenCount = int.MaxValue)
         {
             return Encode(text, addSpecialTokens, maxTokenCount).Ids;

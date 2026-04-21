@@ -302,6 +302,10 @@ namespace KitsuMate.Tokenizers.Core
                 options.AddPrefixSpace = preTokenizer?.AddPrefixSpace ?? false;
                 options.UseRegex = preTokenizer?.UseRegex ?? true;
             }
+            else if (preTokenizer == null)
+            {
+                options.SplitOnWhitespace = false;
+            }
 
             options.CleanUpTokenizationSpaces = root["clean_up_tokenization_spaces"]?.Value<bool?>() ?? options.CleanUpTokenizationSpaces;
             if (tokenizerConfigRoot != null)
@@ -448,6 +452,11 @@ namespace KitsuMate.Tokenizers.Core
             if (Options.UseByteLevel)
             {
                 return GetByteLevelSegments(text);
+            }
+
+            if (!Options.SplitOnWhitespace)
+            {
+                return new[] { new SegmentInput(text, 0, 0, 0, 0) };
             }
 
             var wordIndex = 0;

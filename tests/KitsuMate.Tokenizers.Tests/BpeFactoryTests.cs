@@ -45,6 +45,9 @@ namespace KitsuMate.Tokenizers.Tests
         {
             var root = JObject.Parse("""
             {
+                            "pre_tokenizer": {
+                                "type": "WhitespaceSplit"
+                            },
                             "decoder": {
                                 "type": "BPEDecoder",
                                 "suffix": "</w>"
@@ -130,6 +133,31 @@ namespace KitsuMate.Tokenizers.Tests
             Assert.Equal(new[] { "hello", "Ġthere" }, encoding.Tokens);
             Assert.Equal("hello there", tokenizer.Decode(encoding.Ids));
             Assert.Equal(new (int Start, int End)[] { (0, 5), (5, 11) }, encoding.Offsets);
+        }
+
+        [Fact]
+        public void CreateBpeRuntime_WithoutPreTokenizer_PreservesExplicitSpaceTokenFromTokenizerJson()
+        {
+            var root = JObject.Parse("""
+            {
+                "model": {
+                    "type": "BPE",
+                    "vocab": {
+                        "a": 0,
+                        " ": 1,
+                        "b": 2
+                    },
+                    "merges": []
+                }
+            }
+            """);
+
+            var tokenizer = TokenizerFactory.CreateBpeRuntime(root);
+            var encoding = tokenizer.Encode("a b", addSpecialTokens: false);
+
+            Assert.Equal(new[] { 0, 1, 2 }, encoding.Ids);
+            Assert.Equal(new[] { "a", " ", "b" }, encoding.Tokens);
+            Assert.Equal(new (int Start, int End)[] { (0, 1), (1, 2), (2, 3) }, encoding.Offsets);
         }
 
         [Fact]

@@ -31,6 +31,10 @@ namespace KitsuMate.Tokenizers.Core
 
         Padding? Padding { get; set; }
 
+        int? TokenToId(string token);
+
+        string? IdToToken(int id);
+
         IReadOnlyList<int> EncodeToIds(string text, bool addSpecialTokens = true, int maxTokenCount = int.MaxValue);
 
         IReadOnlyList<int> EncodePairToIds(string text, string pair, bool addSpecialTokens = true, int maxTokenCount = int.MaxValue);

@@ -61,11 +61,11 @@ namespace KitsuMate.Tokenizers.Core
 
         public TokenizerBackendType BackendType { get; }
 
-    public IReadOnlyList<TokenizerJsonAddedToken> AddedTokens { get; }
+        public IReadOnlyList<TokenizerJsonAddedToken> AddedTokens { get; }
 
-    public Truncation? Truncation { get; }
+        public Truncation? Truncation { get; }
 
-    public Padding? Padding { get; }
+        public Padding? Padding { get; }
 
         public NormalizerConfig? NormalizerConfig { get; }
 

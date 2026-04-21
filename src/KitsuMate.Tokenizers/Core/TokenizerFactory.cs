@@ -374,10 +374,11 @@ namespace KitsuMate.Tokenizers.Core
             var padding = ParsePadding(root["padding"] as JObject);
             var sentencePieceModelPath = resolveSiblingArtifacts ? FindSentencePieceModelSibling(tokenizerJsonPath) : null;
             var applySentencePieceIdOffset = ShouldApplySentencePieceIdOffset(sentencePieceModelPath, tokenizerConfigRoot);
+            var tokenizerName = ResolveTokenizerJsonName(tokenizerJsonPath, resolveSiblingArtifacts);
 
             return new TokenizerJsonPipeline(
                 tokenizerJsonPath,
-                Path.GetFileNameWithoutExtension(tokenizerJsonPath) ?? "tokenizer-json",
+                tokenizerName,
                 root,
                 tokenizerConfigRoot,
                 backendType,
@@ -395,6 +396,23 @@ namespace KitsuMate.Tokenizers.Core
                 sentencePieceModelPath,
                 applySentencePieceIdOffset,
                 ShouldAddDummyPrefixForSentencePieceBpe(preTokenizerConfig));
+        }
+
+        private static string ResolveTokenizerJsonName(string tokenizerJsonPath, bool resolveSiblingArtifacts)
+        {
+            if (!resolveSiblingArtifacts || string.IsNullOrWhiteSpace(tokenizerJsonPath))
+            {
+                return "tokenizer-json";
+            }
+
+            try
+            {
+                return Path.GetFileNameWithoutExtension(tokenizerJsonPath) ?? "tokenizer-json";
+            }
+            catch (ArgumentException)
+            {
+                return "tokenizer-json";
+            }
         }
 
         private static IReadOnlyList<TokenizerJsonAddedToken> ParseAddedTokens(JArray? addedTokens)
@@ -455,14 +473,52 @@ namespace KitsuMate.Tokenizers.Core
                 return null;
             }
 
+            var strategyToken = padding["strategy"];
+            var strategy = ReadPaddingStrategy(strategyToken, out var fixedLengthFromStrategy);
+
             return new Padding(
-                padding["strategy"]?.Value<string>(),
+                strategy,
                 padding["direction"]?.Value<string>(),
-                padding["length"]?.Value<int?>(),
+                padding["length"]?.Value<int?>() ?? fixedLengthFromStrategy,
                 padding["pad_id"]?.Value<int?>() ?? 0,
                 padding["pad_type_id"]?.Value<int?>() ?? 0,
                 padding["pad_token"]?.Value<string>(),
                 padding["pad_to_multiple_of"]?.Value<int?>());
+        }
+
+        private static string? ReadPaddingStrategy(JToken? strategyToken, out int? fixedLength)
+        {
+            fixedLength = null;
+            if (strategyToken == null)
+            {
+                return null;
+            }
+
+            if (strategyToken.Type == JTokenType.String)
+            {
+                return strategyToken.Value<string>();
+            }
+
+            if (strategyToken is not JObject strategyObject)
+            {
+                return strategyToken.ToString();
+            }
+
+            var fixedToken = strategyObject["Fixed"];
+            if (fixedToken != null)
+            {
+                fixedLength = fixedToken.Value<int?>();
+                return "Fixed";
+            }
+
+            var batchLongestToken = strategyObject["BatchLongest"];
+            if (batchLongestToken != null)
+            {
+                return "BatchLongest";
+            }
+
+            var firstProperty = strategyObject.Properties().FirstOrDefault();
+            return firstProperty?.Name;
         }
 
         private static TokenizerBackendType MapModelType(string explicitType)
@@ -658,7 +714,7 @@ namespace KitsuMate.Tokenizers.Core
             var normalizer = pipeline.Normalizer ?? (options.LowerCaseBeforeTokenization ? new LowercaseNormalizer() : null);
             var preTokenizer = pipeline.PreTokenizer ?? (options.ApplyBasicTokenization ? new BertPreTokenizer() : null);
             var decoder = pipeline.Decoder ?? new WordPieceDecoder(options.ContinuingSubwordPrefix, options.CleanUpTokenizationSpaces);
-            return CreateWordPieceRuntime(model, normalizer, preTokenizer, decoder, pipeline.PostProcessor, pipeline.Truncation, pipeline.Padding);
+            return CreateWordPieceRuntime(model, normalizer, preTokenizer, decoder, pipeline.PostProcessor, truncation: null, padding: null);
         }
 
         private static ITokenizer CreateBpe(TokenizerJsonPipeline pipeline)
@@ -667,7 +723,7 @@ namespace KitsuMate.Tokenizers.Core
             var addedTokensById = TokenizerModelRuntimeFactory.ReadBpeAddedTokens(pipeline.AddedTokens, pipeline.Root, pipeline.TokenizerConfigRoot, model);
             var postProcessor = TokenizerModelRuntimeFactory.CreateBpePostProcessor(pipeline.PostProcessorConfig, pipeline.PreTokenizerConfig, addedTokensById);
             TokenizerModelRuntimeFactory.ApplyBpeAddedTokenNormalization(addedTokensById, pipeline.Normalizer);
-            return CreateBpeRuntime(model, pipeline.Normalizer, pipeline.PreTokenizer, postProcessor, pipeline.Decoder, addedTokensById, pipeline.Truncation, pipeline.Padding);
+            return CreateBpeRuntime(model, pipeline.Normalizer, pipeline.PreTokenizer, postProcessor, pipeline.Decoder, addedTokensById, truncation: null, padding: null);
         }
 
         private static ITokenizer CreateSentencePieceUnigram(TokenizerJsonPipeline pipeline)

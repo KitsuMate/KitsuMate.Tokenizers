@@ -307,7 +307,7 @@ namespace KitsuMate.Tokenizers.Tests
         }
 
         [Fact]
-        public void Encode_WithOptions_UsesConfiguredPaddingMetadataFromTokenizer()
+        public void Encode_WithOptions_UsesDefaultPaddingMetadataWhenTokenizerHasNoActivePaddingConfiguration()
         {
             var path = Path.GetTempFileName();
 
@@ -342,10 +342,10 @@ namespace KitsuMate.Tokenizers.Tests
                     Padding = TokenizerPaddingMode.MaxLength,
                 });
 
-                Assert.Equal(new[] { 99, 99, 99, 1 }, result.Ids);
-                Assert.Equal(new[] { "<pad>", "<pad>", "<pad>", "hello" }, result.Tokens);
-                Assert.Equal(new[] { 3, 3, 3, 0 }, result.TypeIds);
-                Assert.Equal(new[] { 0, 0, 0, 1 }, result.AttentionMask);
+                Assert.Equal(new[] { 1, 0, 0, 0 }, result.Ids);
+                Assert.Equal(new[] { "hello", "[PAD]", "[PAD]", "[PAD]" }, result.Tokens);
+                Assert.Equal(new[] { 0, 0, 0, 0 }, result.TypeIds);
+                Assert.Equal(new[] { 1, 0, 0, 0 }, result.AttentionMask);
             }
             finally
             {
@@ -357,7 +357,7 @@ namespace KitsuMate.Tokenizers.Tests
         }
 
         [Fact]
-        public void EncodeBatch_WithOptions_UsesConfiguredPaddingMetadataFromTokenizer()
+        public void EncodeBatch_WithOptions_UsesDefaultPaddingMetadataWhenTokenizerHasNoActivePaddingConfiguration()
         {
             var path = Path.GetTempFileName();
 
@@ -393,10 +393,10 @@ namespace KitsuMate.Tokenizers.Tests
                 });
 
                 Assert.Equal(2, results.Count);
-                Assert.Equal(new[] { 99, 1 }, results[0].Ids);
-                Assert.Equal(new[] { "<pad>", "hello" }, results[0].Tokens);
-                Assert.Equal(new[] { 3, 0 }, results[0].TypeIds);
-                Assert.Equal(new[] { 0, 1 }, results[0].AttentionMask);
+                Assert.Equal(new[] { 1, 0 }, results[0].Ids);
+                Assert.Equal(new[] { "hello", "[PAD]" }, results[0].Tokens);
+                Assert.Equal(new[] { 0, 0 }, results[0].TypeIds);
+                Assert.Equal(new[] { 1, 0 }, results[0].AttentionMask);
                 Assert.Equal(new[] { 1, 2 }, results[1].Ids);
                 Assert.Equal(new[] { "hello", "world" }, results[1].Tokens);
             }
@@ -431,6 +431,26 @@ namespace KitsuMate.Tokenizers.Tests
             var encoding = tokenizer.Encode("hello world");
 
             Assert.Equal(encoding.Ids.Count, tokenizer.CountTokens("hello world"));
+        }
+
+        [Fact]
+        public void TokenLookup_Methods_DelegateToUnderlyingModel()
+        {
+            var tokenizer = Tokenizer.Create(new WordPieceModel(
+                new Dictionary<string, int>
+                {
+                    ["[UNK]"] = 0,
+                    ["hello"] = 42,
+                },
+                new WordPieceTokenizerOptions
+                {
+                    UnknownToken = "[UNK]",
+                }));
+
+            Assert.Equal(42, tokenizer.TokenToId("hello"));
+            Assert.Null(tokenizer.TokenToId("missing"));
+            Assert.Equal("hello", tokenizer.IdToToken(42));
+            Assert.Null(tokenizer.IdToToken(7));
         }
 
         private static string CreateTempDirectory()

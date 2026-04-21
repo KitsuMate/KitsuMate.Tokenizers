@@ -17,6 +17,8 @@ namespace KitsuMate.Tokenizers.Core
 
         public bool UseRegex { get; set; } = true;
 
+        public bool SplitOnWhitespace { get; set; } = true;
+
         public bool CleanUpTokenizationSpaces { get; set; } = true;
     }
 }
