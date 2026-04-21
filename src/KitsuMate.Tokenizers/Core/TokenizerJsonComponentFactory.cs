@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 using KitsuMate.Tokenizers.Decoders;
 using KitsuMate.Tokenizers.Normalizers;
 using KitsuMate.Tokenizers.PostProcessors;
@@ -249,7 +248,7 @@ namespace KitsuMate.Tokenizers.Core
                 TrimOffsets = ReadNullableBool(element, "trim_offsets"),
                 UseRegex = ReadNullableBool(element, "use_regex"),
                 Pattern = ReadPatternString(element["pattern"]) ?? string.Empty,
-                PatternConfig = ParsePatternConfig(element["pattern"] ?? element["pattern_config"]),
+                PatternConfig = ParsePatternConfig(element["pattern"] ?? element["pattern_config"]) ?? new PatternConfig(),
                 Replacement = element["replacement"]?.Value<string>() ?? string.Empty,
                 PrependScheme = element["prepend_scheme"]?.Value<string>() ?? string.Empty,
                 Split = ReadNullableBool(element, "split"),
@@ -321,8 +320,8 @@ namespace KitsuMate.Tokenizers.Core
                 TrimOffsets = element["trim_offsets"]?.Value<bool?>() ?? true,
                 AddPrefixSpace = ReadNullableBool(element, "add_prefix_space"),
                 UseRegex = ReadNullableBool(element, "use_regex"),
-                SingleTemplate = ParseJsonElement(element["single"]),
-                PairTemplate = ParseJsonElement(element["pair"]),
+                SingleTemplate = element["single"]?.DeepClone(),
+                PairTemplate = element["pair"]?.DeepClone(),
                 SpecialTokensDict = ParseSpecialTokensDict(element["special_tokens"] as JObject),
             };
 
@@ -447,17 +446,16 @@ namespace KitsuMate.Tokenizers.Core
             specialTokens = new Tokens();
 
             if (!string.Equals(config.Type, "TemplateProcessing", StringComparison.OrdinalIgnoreCase) ||
-                config.SingleTemplate == null ||
-                config.SingleTemplate.Value.ValueKind != JsonValueKind.Array ||
+                config.SingleTemplate is not JArray singleTemplate ||
                 config.SpecialTokensDict == null ||
                 config.SpecialTokensDict.Count == 0)
             {
                 return false;
             }
 
-            single = ParseTemplate(config.SingleTemplate.Value);
-            pair = config.PairTemplate != null && config.PairTemplate.Value.ValueKind == JsonValueKind.Array
-                ? ParseTemplate(config.PairTemplate.Value)
+            single = ParseTemplate(singleTemplate);
+            pair = config.PairTemplate is JArray pairTemplate
+                ? ParseTemplate(pairTemplate)
                 : new Template(single);
             specialTokens = ParseSpecialTokens(config.SpecialTokensDict);
             return true;
@@ -526,37 +524,6 @@ namespace KitsuMate.Tokenizers.Core
                 {
                     var id = specialToken["id"]?.Value<string>();
                     var typeId = specialToken["type_id"]?.Value<int?>() ?? 0;
-                    if (!string.IsNullOrWhiteSpace(id))
-                    {
-                        template.Add(Piece.FromString($"{id}:{typeId}"));
-                    }
-                }
-            }
-
-            return template;
-        }
-
-        private static Template ParseTemplate(JsonElement templateArray)
-        {
-            var template = new Template();
-            foreach (var entry in templateArray.EnumerateArray())
-            {
-                if (entry.TryGetProperty("Sequence", out var sequence))
-                {
-                    var id = sequence.TryGetProperty("id", out var idProperty) ? idProperty.GetString() : null;
-                    var typeId = sequence.TryGetProperty("type_id", out var typeIdProperty) && typeIdProperty.TryGetInt32(out var parsedTypeId)
-                        ? parsedTypeId
-                        : 0;
-                    template.Add(Piece.FromString($"${id}:{typeId}"));
-                    continue;
-                }
-
-                if (entry.TryGetProperty("SpecialToken", out var specialToken))
-                {
-                    var id = specialToken.TryGetProperty("id", out var idProperty) ? idProperty.GetString() : null;
-                    var typeId = specialToken.TryGetProperty("type_id", out var typeIdProperty) && typeIdProperty.TryGetInt32(out var parsedTypeId)
-                        ? parsedTypeId
-                        : 0;
                     if (!string.IsNullOrWhiteSpace(id))
                     {
                         template.Add(Piece.FromString($"{id}:{typeId}"));
@@ -649,17 +616,6 @@ namespace KitsuMate.Tokenizers.Core
                 },
                 _ => null,
             };
-        }
-
-        private static JsonElement? ParseJsonElement(JToken? token)
-        {
-            if (token == null)
-            {
-                return null;
-            }
-
-            using var document = JsonDocument.Parse(token.ToString());
-            return document.RootElement.Clone();
         }
 
         private static Dictionary<string, SpecialTokenConfig> ParseSpecialTokensDict(JObject? specialTokensRoot)

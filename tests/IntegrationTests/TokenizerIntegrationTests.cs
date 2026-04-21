@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using Xunit;
 using Xunit.Abstractions;
 using KitsuMate.Tokenizers;
 using KitsuMate.Tokenizers.Core;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace IntegrationTests
 {
@@ -39,7 +40,7 @@ namespace IntegrationTests
         {
             public string name { get; set; } = "";
             public string description { get; set; } = "";
-            public JsonElement python_config { get; set; }
+            public JToken? python_config { get; set; }
             public List<string> test_cases { get; set; } = new List<string>();
             public bool is_remote { get; set; } = false;
             public List<RemoteModelConfig> remote_models { get; set; } = new List<RemoteModelConfig>();
@@ -243,7 +244,7 @@ namespace IntegrationTests
         {
             var configPath = Path.Combine(configDir, "config.json");
             var json = File.ReadAllText(configPath);
-            return JsonSerializer.Deserialize<TokenizerConfig>(json)
+            return JsonConvert.DeserializeObject<TokenizerConfig>(json)
                 ?? throw new InvalidOperationException($"Failed to deserialize config from {configPath}");
         }
 
@@ -266,7 +267,7 @@ namespace IntegrationTests
             }
 
             var json = File.ReadAllText(referencePath);
-            var outputs = JsonSerializer.Deserialize<List<ReferenceOutput>>(json)
+            var outputs = JsonConvert.DeserializeObject<List<ReferenceOutput>>(json)
                 ?? throw new InvalidOperationException($"Failed to deserialize reference outputs from {referencePath}");
 
             _referenceCache[configDir] = outputs;

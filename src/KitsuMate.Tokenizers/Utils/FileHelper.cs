@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using System.Text.Json;
+using Newtonsoft.Json;
 
 namespace KitsuMate.Tokenizers.Utils
 {
@@ -18,14 +18,13 @@ namespace KitsuMate.Tokenizers.Utils
                 throw new FileNotFoundException($"File not found: {filePath}");
 
             var json = File.ReadAllText(filePath);
-            var options = new JsonSerializerOptions
+            var settings = new JsonSerializerSettings
             {
-                PropertyNameCaseInsensitive = true,
-                AllowTrailingCommas = true,
-                ReadCommentHandling = JsonCommentHandling.Skip
+                MissingMemberHandling = MissingMemberHandling.Ignore,
+                NullValueHandling = NullValueHandling.Include,
             };
 
-            return JsonSerializer.Deserialize<T>(json, options) 
+            return JsonConvert.DeserializeObject<T>(json, settings)
                 ?? throw new InvalidOperationException($"Failed to deserialize file: {filePath}");
         }
 

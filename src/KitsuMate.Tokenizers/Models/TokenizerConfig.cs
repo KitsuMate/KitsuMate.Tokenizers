@@ -1,7 +1,9 @@
+#nullable disable
+
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 namespace KitsuMate.Tokenizers
 {
     /// <summary>
@@ -10,67 +12,67 @@ namespace KitsuMate.Tokenizers
     /// </summary>
         public class TokenizerConfig
     {
-        [JsonPropertyName("version")]
+        [JsonProperty("version")]
         public string Version { get; set; } = "1.0";
 
-        [JsonPropertyName("truncation")]
+        [JsonProperty("truncation")]
         public TruncationConfig Truncation { get; set; }
 
-        [JsonPropertyName("padding")]
+        [JsonProperty("padding")]
         public PaddingConfig Padding { get; set; }
 
-        [JsonPropertyName("added_tokens")]
+        [JsonProperty("added_tokens")]
         public List<AddedToken> AddedTokens { get; set; } = new List<AddedToken>();
 
-        [JsonPropertyName("normalizer")]
+        [JsonProperty("normalizer")]
         public NormalizerConfig Normalizer { get; set; }
 
-        [JsonPropertyName("pre_tokenizer")]
+        [JsonProperty("pre_tokenizer")]
         public PreTokenizerConfig PreTokenizer { get; set; }
 
-        [JsonPropertyName("post_processor")]
+        [JsonProperty("post_processor")]
         public PostProcessorConfig PostProcessor { get; set; }
 
-        [JsonPropertyName("decoder")]
+        [JsonProperty("decoder")]
         public DecoderConfig Decoder { get; set; }
 
-        [JsonPropertyName("model")]
+        [JsonProperty("model")]
         public ModelConfig Model { get; set; }
 
-        [JsonPropertyName("vocab_size")]
+        [JsonProperty("vocab_size")]
         public int VocabSize { get; set; }
 
-        [JsonPropertyName("unk_token")]
+        [JsonProperty("unk_token")]
         public string UnkToken { get; set; } = "[UNK]";
 
-        [JsonPropertyName("sep_token")]
+        [JsonProperty("sep_token")]
         public string SepToken { get; set; } = "[SEP]";
 
-        [JsonPropertyName("pad_token")]
+        [JsonProperty("pad_token")]
         public string PadToken { get; set; } = "[PAD]";
 
-        [JsonPropertyName("cls_token")]
+        [JsonProperty("cls_token")]
         public string ClsToken { get; set; } = "[CLS]";
 
-        [JsonPropertyName("mask_token")]
+        [JsonProperty("mask_token")]
         public string MaskToken { get; set; } = "[MASK]";
 
-        [JsonPropertyName("bos_token")]
+        [JsonProperty("bos_token")]
         public string BosToken { get; set; }
 
-        [JsonPropertyName("eos_token")]
+        [JsonProperty("eos_token")]
         public string EosToken { get; set; }
 
-        [JsonPropertyName("clean_up_tokenization_spaces")]
+        [JsonProperty("clean_up_tokenization_spaces")]
         public bool CleanUpTokenizationSpaces { get; set; } = true;
 
-        [JsonPropertyName("do_lower_case")]
+        [JsonProperty("do_lower_case")]
         public bool DoLowerCase { get; set; } = false;
 
-        [JsonPropertyName("strip_accents")]
+        [JsonProperty("strip_accents")]
         public bool? StripAccents { get; set; }
 
-        [JsonPropertyName("tokenize_chinese_chars")]
+        [JsonProperty("tokenize_chinese_chars")]
         public bool TokenizeChineseChars { get; set; } = true;
 
 
@@ -211,247 +213,247 @@ namespace KitsuMate.Tokenizers
         public static TokenizerConfig FromFile(string filePath)
         {
             var json = System.IO.File.ReadAllText(filePath);
-            return System.Text.Json.JsonSerializer.Deserialize<TokenizerConfig>(json) 
+            return JsonConvert.DeserializeObject<TokenizerConfig>(json)
                 ?? throw new InvalidOperationException($"Failed to deserialize tokenizer config from {filePath}");
         }
     }
 
         public class TruncationConfig
     {
-        [JsonPropertyName("direction")]
+        [JsonProperty("direction")]
         public string Direction { get; set; } = "Right";
 
-        [JsonPropertyName("max_length")]
+        [JsonProperty("max_length")]
         public int MaxLength { get; set; } = 512;
 
-        [JsonPropertyName("strategy")]
+        [JsonProperty("strategy")]
         public string Strategy { get; set; } = "LongestFirst";
 
-        [JsonPropertyName("stride")]
+        [JsonProperty("stride")]
         public int Stride { get; set; } = 0;
     }
 
         public class PaddingConfig
     {
-        [JsonPropertyName("direction")]
+        [JsonProperty("direction")]
         public string Direction { get; set; } = "Right";
 
-        [JsonPropertyName("pad_id")]
+        [JsonProperty("pad_id")]
         public int PadId { get; set; } = 0;
 
-        [JsonPropertyName("pad_type_id")]
+        [JsonProperty("pad_type_id")]
         public int PadTypeId { get; set; } = 0;
 
-        [JsonPropertyName("pad_token")]
+        [JsonProperty("pad_token")]
         public string PadToken { get; set; } = "[PAD]";
     }
 
         public class AddedToken
     {
-        [JsonPropertyName("id")]
+        [JsonProperty("id")]
         public int Id { get; set; }
 
-        [JsonPropertyName("content")]
+        [JsonProperty("content")]
         public string Content { get; set; }
 
-        [JsonPropertyName("single_word")]
+        [JsonProperty("single_word")]
         public bool SingleWord { get; set; } = false;
 
-        [JsonPropertyName("lstrip")]
+        [JsonProperty("lstrip")]
         public bool Lstrip { get; set; } = false;
 
-        [JsonPropertyName("rstrip")]
+        [JsonProperty("rstrip")]
         public bool Rstrip { get; set; } = false;
 
-        [JsonPropertyName("normalized")]
+        [JsonProperty("normalized")]
         public bool Normalized { get; set; } = false;
 
-        [JsonPropertyName("special")]
+        [JsonProperty("special")]
         public bool Special { get; set; } = true;
     }
 
         public class NormalizerConfig
     {
-        [JsonPropertyName("type")]
+        [JsonProperty("type")]
         public string Type { get; set; }
 
-        [JsonPropertyName("lowercase")]
+        [JsonProperty("lowercase")]
         public bool? Lowercase { get; set; }
 
-        [JsonPropertyName("strip_accents")]
+        [JsonProperty("strip_accents")]
         public bool? StripAccents { get; set; }
 
-        [JsonPropertyName("handle_chinese_chars")]
+        [JsonProperty("handle_chinese_chars")]
         public bool? HandleChineseChars { get; set; }
 
-        [JsonPropertyName("normalizers")]
+        [JsonProperty("normalizers")]
         public List<NormalizerConfig> Normalizers { get; set; } = new List<NormalizerConfig>();
 
-        [JsonPropertyName("pattern")]
+        [JsonProperty("pattern")]
         public PatternConfig Pattern { get; set; }
 
-        [JsonPropertyName("content")]
+        [JsonProperty("content")]
         public string Content { get; set; }
 
-        [JsonPropertyName("clean_text")]
+        [JsonProperty("clean_text")]
         public bool? CleanText { get; set; }
 
-        [JsonPropertyName("left")]
+        [JsonProperty("left")]
         public bool? Left { get; set; }
 
-        [JsonPropertyName("right")]
+        [JsonProperty("right")]
         public bool? Right { get; set; }
 
-        [JsonPropertyName("precompiled_charsmap")]
+        [JsonProperty("precompiled_charsmap")]
         public string PrecompiledCharsmap { get; set; }
 
-        [JsonPropertyName("prepend_string")]
+        [JsonProperty("prepend_string")]
         public string PrependString { get; set; }
     }
 
         public class PatternConfig
     {
-        [JsonPropertyName("Regex")]
+        [JsonProperty("Regex")]
         public string Regex { get; set; }
 
-        [JsonPropertyName("String")]
+        [JsonProperty("String")]
         public string String { get; set; }
     }
 
         public class PreTokenizerConfig
     {
-        [JsonPropertyName("type")]
+        [JsonProperty("type")]
         public string Type { get; set; }
 
-        [JsonPropertyName("pretokenizers")]
+        [JsonProperty("pretokenizers")]
         public List<PreTokenizerConfig> PreTokenizers { get; set; } = new List<PreTokenizerConfig>();
 
-        [JsonPropertyName("add_prefix_space")]
+        [JsonProperty("add_prefix_space")]
         public bool? AddPrefixSpace { get; set; }
 
-        [JsonPropertyName("trim_offsets")]
+        [JsonProperty("trim_offsets")]
         public bool? TrimOffsets { get; set; }
 
-        [JsonPropertyName("use_regex")]
+        [JsonProperty("use_regex")]
         public bool? UseRegex { get; set; }
 
-        [JsonPropertyName("pattern")]
+        [JsonProperty("pattern")]
         public string Pattern { get; set; }
         
-        [JsonPropertyName("pattern_config")]
+        [JsonProperty("pattern_config")]
         public PatternConfig PatternConfig { get; set; }
 
         // Metaspace pre-tokenizer properties
-        [JsonPropertyName("replacement")]
+        [JsonProperty("replacement")]
         public string Replacement { get; set; }
 
-        [JsonPropertyName("prepend_scheme")]
+        [JsonProperty("prepend_scheme")]
         public string PrependScheme { get; set; }
 
-        [JsonPropertyName("split")]
+        [JsonProperty("split")]
         public bool? Split { get; set; }
 
         // Digits pre-tokenizer properties
-        [JsonPropertyName("individual_digits")]
+        [JsonProperty("individual_digits")]
         public bool? IndividualDigits { get; set; }
 
         // Split/Punctuation pre-tokenizer properties
-        [JsonPropertyName("behavior")]
+        [JsonProperty("behavior")]
         public string Behavior { get; set; }
 
-        [JsonPropertyName("invert")]
+        [JsonProperty("invert")]
         public bool? Invert { get; set; }
 
         // CharDelimiterSplit pre-tokenizer properties
-        [JsonPropertyName("delimiter")]
+        [JsonProperty("delimiter")]
         public string Delimiter { get; set; }
 
         // FixedLength pre-tokenizer properties
-        [JsonPropertyName("length")]
+        [JsonProperty("length")]
         public int? Length { get; set; }
     }
 
         public class PostProcessorConfig
     {
-        [JsonPropertyName("type")]
+        [JsonProperty("type")]
         public string Type { get; set; }
 
-        [JsonPropertyName("sep")]
+        [JsonProperty("sep")]
         public List<string> Sep { get; set; } = new List<string>();
 
-        [JsonPropertyName("cls")]
+        [JsonProperty("cls")]
         public List<string> Cls { get; set; } = new List<string>();
 
-        [JsonPropertyName("trim_offsets")]
+        [JsonProperty("trim_offsets")]
         public bool TrimOffsets { get; set; } = true;
 
-        [JsonPropertyName("add_prefix_space")]
+        [JsonProperty("add_prefix_space")]
         public bool? AddPrefixSpace { get; set; }
 
-        [JsonPropertyName("use_regex")]
+        [JsonProperty("use_regex")]
         public bool? UseRegex { get; set; }
 
-        [JsonPropertyName("processors")]
+        [JsonProperty("processors")]
         public List<PostProcessorConfig> Processors { get; set; } = new List<PostProcessorConfig>();
 
         // Template processing properties
-        [JsonPropertyName("single")]
-        public JsonElement? SingleTemplate { get; set; }  // Can be string or complex object
+        [JsonProperty("single")]
+        public JToken SingleTemplate { get; set; }
 
-        [JsonPropertyName("pair")]
-        public JsonElement? PairTemplate { get; set; }  // Can be string or complex object
+        [JsonProperty("pair")]
+        public JToken PairTemplate { get; set; }
 
-        [JsonPropertyName("special_tokens")]
+        [JsonProperty("special_tokens")]
         public Dictionary<string, SpecialTokenConfig> SpecialTokensDict { get; set; } = new Dictionary<string, SpecialTokenConfig>();
     }
 
         public class SpecialTokenConfig
     {
-        [JsonPropertyName("id")]
+        [JsonProperty("id")]
         public string Id { get; set; }
 
-        [JsonPropertyName("ids")]
+        [JsonProperty("ids")]
         public List<int> Ids { get; set; } = new List<int>();
 
-        [JsonPropertyName("tokens")]
+        [JsonProperty("tokens")]
         public List<string> Tokens { get; set; } = new List<string>();
     }
 
         public class DecoderConfig
     {
-        [JsonPropertyName("type")]
+        [JsonProperty("type")]
         public string Type { get; set; }
 
-        [JsonPropertyName("decoders")]
+        [JsonProperty("decoders")]
         public List<DecoderConfig> Decoders { get; set; } = new List<DecoderConfig>();
 
         // BPE Decoder properties
-        [JsonPropertyName("suffix")]
+        [JsonProperty("suffix")]
         public string Suffix { get; set; }
 
         // WordPiece Decoder properties
-        [JsonPropertyName("prefix")]
+        [JsonProperty("prefix")]
         public string Prefix { get; set; }
 
         // Common cleanup property for WordPiece and CTC
-        [JsonPropertyName("cleanup")]
+        [JsonProperty("cleanup")]
         public bool? Cleanup { get; set; }
 
         // CTC Decoder properties
-        [JsonPropertyName("pad_token")]
+        [JsonProperty("pad_token")]
         public string PadToken { get; set; }
 
-        [JsonPropertyName("word_delimiter_token")]
+        [JsonProperty("word_delimiter_token")]
         public string WordDelimiterToken { get; set; }
 
         // Metaspace Decoder properties
-        [JsonPropertyName("replacement")]
+        [JsonProperty("replacement")]
         public string Replacement { get; set; }
 
-        [JsonPropertyName("prepend_scheme")]
+        [JsonProperty("prepend_scheme")]
         public string PrependScheme { get; set; }
 
-        [JsonPropertyName("split")]
+        [JsonProperty("split")]
         public bool? Split { get; set; }
 
         // ByteFallback Decoder properties (no specific properties beyond type)
@@ -460,37 +462,37 @@ namespace KitsuMate.Tokenizers
 
         public class ModelConfig
     {
-        [JsonPropertyName("type")]
+        [JsonProperty("type")]
         public string Type { get; set; }
 
-        [JsonPropertyName("vocab")]
+        [JsonProperty("vocab")]
         public Dictionary<string, int> Vocab { get; set; } = new Dictionary<string, int>();
 
-        [JsonPropertyName("merges")]
+        [JsonProperty("merges")]
         public List<string> Merges { get; set; } = new List<string>();
 
-        [JsonPropertyName("unk_token")]
+        [JsonProperty("unk_token")]
         public string UnkToken { get; set; }
 
-        [JsonPropertyName("continuing_subword_prefix")]
+        [JsonProperty("continuing_subword_prefix")]
         public string ContinuingSubwordPrefix { get; set; }
 
-        [JsonPropertyName("end_of_word_suffix")]
+        [JsonProperty("end_of_word_suffix")]
         public string EndOfWordSuffix { get; set; }
 
-        [JsonPropertyName("fuse_unk")]
+        [JsonProperty("fuse_unk")]
         public bool? FuseUnk { get; set; }
 
-        [JsonPropertyName("dropout")]
+        [JsonProperty("dropout")]
         public float? Dropout { get; set; }
 
-        [JsonPropertyName("byte_fallback")]
+        [JsonProperty("byte_fallback")]
         public bool? ByteFallback { get; set; }
 
-        [JsonPropertyName("ignore_merges")]
+        [JsonProperty("ignore_merges")]
         public bool? IgnoreMerges { get; set; }
 
-        [JsonPropertyName("split_on_whitespace_only")]
+        [JsonProperty("split_on_whitespace_only")]
         public bool? SplitOnWhitespaceOnly { get; set; }
 
     }
