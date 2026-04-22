@@ -209,6 +209,9 @@ namespace KitsuMate.Tokenizers.Tests
                 {
                         var tokenizerJson = Encoding.UTF8.GetBytes("""
                         {
+                            "pre_tokenizer": {
+                                "type": "WhitespaceSplit"
+                            },
                             "decoder": {
                                 "type": "BPEDecoder",
                                 "suffix": "</w>"
