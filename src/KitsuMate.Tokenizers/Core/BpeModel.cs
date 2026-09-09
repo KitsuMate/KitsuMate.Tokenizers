@@ -290,6 +290,7 @@ namespace KitsuMate.Tokenizers.Core
             if (model != null)
             {
                 options.UnknownToken = model["unk_token"]?.Value<string>();
+                options.ByteFallback = model["byte_fallback"]?.Value<bool>() ?? false;
                 options.ContinuingSubwordPrefix = model["continuing_subword_prefix"]?.Value<string>();
                 options.EndOfWordSuffix = model["end_of_word_suffix"]?.Value<string>();
             }
@@ -346,13 +347,15 @@ namespace KitsuMate.Tokenizers.Core
                 return BuildByteLevelSymbols(segment);
             }
 
-            var textElementIndexes = StringInfo.ParseCombiningCharacters(segment.Text);
-            var symbols = new List<BpeTokenPiece>(textElementIndexes.Length);
+            var textElementIndexes = new List<int>();
+            for (int offset = 0; offset < segment.Text.Length; offset += char.IsHighSurrogate(segment.Text[offset]) && offset + 1 < segment.Text.Length && char.IsLowSurrogate(segment.Text[offset + 1]) ? 2 : 1)
+                textElementIndexes.Add(offset);
+            var symbols = new List<BpeTokenPiece>(textElementIndexes.Count);
 
-            for (var index = 0; index < textElementIndexes.Length; index++)
+            for (var index = 0; index < textElementIndexes.Count; index++)
             {
                 var start = textElementIndexes[index];
-                var end = index + 1 < textElementIndexes.Length ? textElementIndexes[index + 1] : segment.Text.Length;
+                var end = index + 1 < textElementIndexes.Count ? textElementIndexes[index + 1] : segment.Text.Length;
                 var value = segment.Text.Substring(start, end - start);
 
                 if (index > 0 && !string.IsNullOrEmpty(Options.ContinuingSubwordPrefix))
@@ -360,7 +363,7 @@ namespace KitsuMate.Tokenizers.Core
                     value = Options.ContinuingSubwordPrefix + value;
                 }
 
-                if (index == textElementIndexes.Length - 1 && !string.IsNullOrEmpty(Options.EndOfWordSuffix))
+                if (index == textElementIndexes.Count - 1 && !string.IsNullOrEmpty(Options.EndOfWordSuffix))
                 {
                     value += Options.EndOfWordSuffix;
                 }
@@ -369,6 +372,18 @@ namespace KitsuMate.Tokenizers.Core
                 {
                     symbols.Add(new BpeTokenPiece(value, id, segment.Offset + start, segment.Offset + end, segment.WordIndex));
                     continue;
+                }
+
+                if (Options.ByteFallback)
+                {
+                    var bytes = Encoding.UTF8.GetBytes(value);
+                    var fallbackTokens = bytes.Select(b => $"<0x{b:X2}>").ToArray();
+                    if (fallbackTokens.All(token => _vocabulary.ContainsKey(token)))
+                    {
+                        foreach (var token in fallbackTokens)
+                            symbols.Add(new BpeTokenPiece(token, _vocabulary[token], segment.Offset + start, segment.Offset + end, segment.WordIndex));
+                        continue;
+                    }
                 }
 
                 if (!string.IsNullOrEmpty(Options.UnknownToken) && _vocabulary.TryGetValue(Options.UnknownToken, out var unknownId))
@@ -386,12 +401,12 @@ namespace KitsuMate.Tokenizers.Core
         private List<BpeTokenPiece> BuildByteLevelSymbols(SegmentInput segment)
         {
             var rawSymbols = new List<(string Value, int Start, int End)>();
-            var textElementIndexes = StringInfo.ParseCombiningCharacters(segment.Text);
+            var textElementIndexes = StringInfo.ParseCombiningCharacters(segment.Text).ToList();
 
-            for (var index = 0; index < textElementIndexes.Length; index++)
+            for (var index = 0; index < textElementIndexes.Count; index++)
             {
                 var start = textElementIndexes[index];
-                var end = index + 1 < textElementIndexes.Length ? textElementIndexes[index + 1] : segment.Text.Length;
+                var end = index + 1 < textElementIndexes.Count ? textElementIndexes[index + 1] : segment.Text.Length;
                 var textElement = segment.Text.Substring(start, end - start);
                 var mapped = TokenizerUtils.ApplyByteLevelMapping(textElement);
                 var absoluteStart = AdjustByteLevelOffset(segment, start);

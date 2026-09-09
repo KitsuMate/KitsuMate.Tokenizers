@@ -343,7 +343,10 @@ namespace KitsuMate.Tokenizers
                 throw new ArgumentNullException(nameof(text));
             }
 
-            var encoding = _encodeCore(this, text, maxTokenCount);
+            // Reserve the post-processor tokens before truncating content so EOS survives.
+            int contentLimit = Math.Max(0, maxTokenCount - (addSpecialTokens ? GetAddedTokensCount(isPair: false) : 0));
+            var encoding = _encodeCore(this, text, contentLimit);
+            TruncateEncoding(encoding, contentLimit);
             ApplyConfiguredSingleTruncation(encoding, addSpecialTokens);
 
             var finalized = _finalizeSingle != null

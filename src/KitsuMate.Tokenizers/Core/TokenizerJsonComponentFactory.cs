@@ -193,7 +193,9 @@ namespace KitsuMate.Tokenizers.Core
 
             var config = new NormalizerConfig
             {
-                Type = element["type"]?.Value<string>() ?? string.Empty
+                Type = element["type"]?.Value<string>() ?? string.Empty,
+                Pattern = ParsePatternConfig(element["pattern"]),
+                Content = element["content"]?.Value<string>()
             };
 
             if (element["lowercase"]?.Type == JTokenType.Boolean)
