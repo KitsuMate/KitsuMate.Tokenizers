@@ -379,19 +379,16 @@ namespace KitsuMate.Tokenizers.Tests
             Assert.Equal(string.Empty, tokenizer.Decode(encoding.Ids, skipSpecialTokens: true));
         }
 
-        [Fact]
+        [EmbeddingGemmaFact]
         public void FromLocal_LoadsCachedEmbeddingGemmaFixtureThroughTokenizerLoader()
         {
-            var modelDirectory = GetCachedModelDirectory("google--embeddinggemma-300m--main");
-            if (!Directory.Exists(modelDirectory))
-            {
-                return;
-            }
+            var modelDirectory = Environment.GetEnvironmentVariable("KITSUMATE_EMBEDDINGGEMMA_FIXTURE") ?? GetCachedModelDirectory("google--embeddinggemma-300m--main");
+            Assert.True(Directory.Exists(modelDirectory), "EmbeddingGemma fixture missing. Set KITSUMATE_EMBEDDINGGEMMA_FIXTURE to a downloaded model directory.");
 
             var tokenizer = Tokenizer.FromLocal(modelDirectory);
 
             var first = tokenizer.Encode("Embedding Gemma should eventually run here.");
-            Assert.Equal(TokenizerBackendType.SentencePieceBpe, tokenizer.BackendType);
+            Assert.Equal(TokenizerBackendType.Bpe, tokenizer.BackendType);
             Assert.Equal(new[] { 2, 205511, 147224, 1374, 10734, 1845, 1590, 236761, 1 }, first.Ids);
 
             var second = tokenizer.Encode("Offset tracking should be measured too.");
