@@ -355,7 +355,10 @@ namespace KitsuMate.Tokenizers.Core
         {
             var backendType = InferBackendType(root);
             var siblingSentencePieceType = resolveSiblingArtifacts ? TryInspectSentencePieceSibling(tokenizerJsonPath) : TokenizerBackendType.Unknown;
-            if (resolveSiblingArtifacts && siblingSentencePieceType == TokenizerBackendType.SentencePieceBpe && backendType == TokenizerBackendType.Bpe)
+            // A complete tokenizer.json defines its own normalization, added tokens and merges.
+            // A sibling SentencePiece file must not replace that pipeline.
+            bool hasBpeData = root["model"]?["vocab"] is JObject vocabulary && vocabulary.Count > 0 && root["model"]?["merges"] is JArray;
+            if (resolveSiblingArtifacts && !hasBpeData && siblingSentencePieceType == TokenizerBackendType.SentencePieceBpe && backendType == TokenizerBackendType.Bpe)
             {
                 backendType = TokenizerBackendType.SentencePieceBpe;
             }

@@ -25,4 +25,7 @@
     <ProjectReference Include="..\..\src\KitsuMate.Tokenizers\KitsuMate.Tokenizers.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="EmbeddingGemmaReference.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

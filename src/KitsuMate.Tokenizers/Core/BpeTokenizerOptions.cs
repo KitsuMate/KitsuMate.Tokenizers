@@ -13,6 +13,8 @@ namespace KitsuMate.Tokenizers.Core
 
         public bool UseByteLevel { get; set; }
 
+        public bool ByteFallback { get; set; }
+
         public bool AddPrefixSpace { get; set; }
 
         public bool UseRegex { get; set; } = true;

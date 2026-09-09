@@ -318,9 +318,9 @@ namespace KitsuMate.Tokenizers.Tests
                     "type": "BPE",
                     "vocab": {
                         "[UNK]": 0,
-                        "D": 1,
-                        "A": 2,
-                        "Y": 3
+                        "d": 1,
+                        "a": 2,
+                        "y": 3
                     },
                     "unk_token": "[UNK]",
                     "merges": []
@@ -332,7 +332,7 @@ namespace KitsuMate.Tokenizers.Tests
             var encoding = tokenizer.Encode("DAY", addSpecialTokens: false);
 
             Assert.Equal(new[] { 1, 2, 3 }, encoding.Ids);
-            Assert.Equal(new[] { "D", "A", "Y" }, encoding.Tokens);
+            Assert.Equal(new[] { "d", "a", "y" }, encoding.Tokens);
             Assert.Equal(new[] { 0, 0, 0 }, encoding.SpecialTokensMask);
             Assert.Equal(new (int Start, int End)[] { (0, 1), (1, 2), (2, 3) }, encoding.Offsets);
         }

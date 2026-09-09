@@ -122,7 +122,7 @@ namespace KitsuMate.Tokenizers.Core
 
             return new TokenizerAssemblySpec(
                 model,
-                (tokenizer, text, maxTokenCount) => CreateBpeEncoding(model, tokenizer.Normalizer, addedTokens, addedTokensByContent, text, maxTokenCount),
+                (tokenizer, text, maxTokenCount) => CreateBpeEncoding(model, tokenizer.Normalizer, tokenizer.PreTokenizer, addedTokens, addedTokensByContent, text, maxTokenCount),
                 (tokenizer, ids, skipSpecialTokens) => DecodeBpeCore(model, addedTokens, specialTokenIds, ids, skipSpecialTokens))
             {
                 Normalizer = normalizer,
@@ -576,9 +576,9 @@ namespace KitsuMate.Tokenizers.Core
             return isPair ? 3 : 2;
         }
 
-        private static EncodingResult CreateBpeEncoding(BpeModel model, INormalizer? normalizer, IReadOnlyDictionary<int, BpeRuntimeAddedTokenInfo> addedTokensById, IReadOnlyList<BpeRuntimeAddedTokenInfo> addedTokensByContent, string text, int maxTokenCount)
+        private static EncodingResult CreateBpeEncoding(BpeModel model, INormalizer? normalizer, IPreTokenizer? preTokenizer, IReadOnlyDictionary<int, BpeRuntimeAddedTokenInfo> addedTokensById, IReadOnlyList<BpeRuntimeAddedTokenInfo> addedTokensByContent, string text, int maxTokenCount)
         {
-            var pieces = EncodeBpeWithAddedTokens(model, normalizer, addedTokensByContent, text, maxTokenCount);
+            var pieces = EncodeBpeWithAddedTokens(model, normalizer, preTokenizer, addedTokensByContent, text, maxTokenCount);
             return new EncodingResult
             {
                 Ids = pieces.Select(piece => piece.Id).ToList(),
@@ -591,11 +591,11 @@ namespace KitsuMate.Tokenizers.Core
             };
         }
 
-        private static IReadOnlyList<BpeModel.BpeTokenPiece> EncodeBpeWithAddedTokens(BpeModel model, INormalizer? normalizer, IReadOnlyList<BpeRuntimeAddedTokenInfo> addedTokensByContent, string text, int maxTokenCount)
+        private static IReadOnlyList<BpeModel.BpeTokenPiece> EncodeBpeWithAddedTokens(BpeModel model, INormalizer? normalizer, IPreTokenizer? preTokenizer, IReadOnlyList<BpeRuntimeAddedTokenInfo> addedTokensByContent, string text, int maxTokenCount)
         {
             if (addedTokensByContent.Count == 0)
             {
-                return model.Encode(text, maxTokenCount);
+                return EncodeBpeChunk(model, normalizer, preTokenizer, text, maxTokenCount);
             }
 
             var pieces = new List<BpeModel.BpeTokenPiece>();
@@ -612,13 +612,13 @@ namespace KitsuMate.Tokenizers.Core
                 var match = FindNextBpeAddedToken(normalizer, addedTokensByContent, text, currentIndex);
                 if (match == null)
                 {
-                    AppendEncodedBpeChunk(model, text.Substring(currentIndex), currentIndex, ref nextWordIndex, pieces, maxTokenCount);
+                    AppendEncodedBpeChunk(model, normalizer, preTokenizer, text.Substring(currentIndex), currentIndex, ref nextWordIndex, pieces, maxTokenCount);
                     break;
                 }
 
                 if (match.ConsumedStart > currentIndex)
                 {
-                    AppendEncodedBpeChunk(model, text.Substring(currentIndex, match.ConsumedStart - currentIndex), currentIndex, ref nextWordIndex, pieces, maxTokenCount);
+                    AppendEncodedBpeChunk(model, normalizer, preTokenizer, text.Substring(currentIndex, match.ConsumedStart - currentIndex), currentIndex, ref nextWordIndex, pieces, maxTokenCount);
                     if (pieces.Count >= maxTokenCount)
                     {
                         break;
@@ -632,7 +632,24 @@ namespace KitsuMate.Tokenizers.Core
             return pieces;
         }
 
-        private static void AppendEncodedBpeChunk(BpeModel model, string chunk, int absoluteOffset, ref int nextWordIndex, ICollection<BpeModel.BpeTokenPiece> pieces, int maxTokenCount)
+        private static IReadOnlyList<BpeModel.BpeTokenPiece> EncodeBpeChunk(BpeModel model, INormalizer? normalizer,
+            IPreTokenizer? preTokenizer, string text, int maxTokenCount)
+        {
+            var normalized = normalizer?.Normalize(text) ?? text;
+            if (preTokenizer == null || model.Options.UseByteLevel)
+                return model.Encode(normalized, maxTokenCount);
+            var pieces = new List<BpeModel.BpeTokenPiece>();
+            int wordIndex = 0;
+            foreach (var segment in preTokenizer.PreTokenize(normalized))
+            {
+                pieces.AddRange(model.EncodeSegment(new BpeModel.SegmentInput(
+                    normalized.Substring(segment.Offset, segment.Length), segment.Offset, segment.Offset, 0, wordIndex++)));
+                if (pieces.Count >= maxTokenCount) break;
+            }
+            return pieces.Take(maxTokenCount).ToArray();
+        }
+
+        private static void AppendEncodedBpeChunk(BpeModel model, INormalizer? normalizer, IPreTokenizer? preTokenizer, string chunk, int absoluteOffset, ref int nextWordIndex, ICollection<BpeModel.BpeTokenPiece> pieces, int maxTokenCount)
         {
             if (string.IsNullOrEmpty(chunk) || pieces.Count >= maxTokenCount)
             {
@@ -640,7 +657,7 @@ namespace KitsuMate.Tokenizers.Core
             }
 
             var remainingTokenCount = maxTokenCount - pieces.Count;
-            var chunkPieces = model.Encode(chunk, remainingTokenCount);
+            var chunkPieces = EncodeBpeChunk(model, normalizer, preTokenizer, chunk, remainingTokenCount);
             foreach (var piece in chunkPieces)
             {
                 pieces.Add(new BpeModel.BpeTokenPiece(
